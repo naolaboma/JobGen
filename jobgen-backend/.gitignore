@@ -39,10 +39,10 @@ logs/
 ehthumbs.db
 Thumbs.db
 
-# Swagger generated files
-docs/docs.go
-docs/swagger.json
-docs/swagger.yaml
+# # Swagger generated files
+# docs/docs.go
+# docs/swagger.json
+# docs/swagger.yaml
 
 # Temporary files
 tmp/
