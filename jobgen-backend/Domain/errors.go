@@ -11,6 +11,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid email or password")
 	ErrUserNotVerified   = errors.New("user email is not verified")
 	ErrUserDeactivated   = errors.New("user account is deactivated")
+	ErrAlreadyVerified    = errors.New("email already verified")
 	
 	// Authentication errors
 	ErrInvalidToken      = errors.New("invalid token")
@@ -31,4 +32,10 @@ var (
 	// OTP errors
 	ErrOTPExpired        = errors.New("OTP expired")
 	ErrOTPUsed           = errors.New("OTP already used")
+	
+	// Validation errors
+	ErrInvalidEmail      = errors.New("invalid email format")
+	ErrInvalidUsername   = errors.New("invalid username format")
+	ErrPasswordTooShort  = errors.New("password must be at least 8 characters")
+	ErrFullNameRequired  = errors.New("full name is required")
 )
