@@ -3,6 +3,7 @@ package router
 import (
 	controllers "jobgen-backend/Delivery/Controllers"
 	infrastructure "jobgen-backend/Infrastructure"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -44,6 +45,7 @@ func SetupRouter(
             auth.POST("/refresh", authController.RefreshToken)
             auth.POST("/logout", authMiddleware.RequireAuth(), authController.Logout)
             auth.POST("/resend-otp", userController.ResendOTP)
+            auth.POST("/change-password", authMiddleware.RequireAuth(), userController.ChangePassword)
         }
 
         users := api.Group("/users")
@@ -51,7 +53,6 @@ func SetupRouter(
         {
             users.GET("/profile", userController.GetProfile)
             users.PUT("/profile", userController.UpdateProfile)
-            users.POST("/change-password", userController.ChangePassword)
             users.DELETE("/account", userController.DeleteAccount)
         }
 
@@ -67,7 +68,15 @@ func SetupRouter(
 
     // Health check
     r.GET("/health", func(c *gin.Context) {
-        c.JSON(200, gin.H{"status": "ok"})
+        c.JSON(200, gin.H{
+            "success": true,
+            "message": "Service is healthy",
+            "data": gin.H{
+                "status":    "ok",
+                "timestamp": time.Now().UTC(),
+                "version":   "1.0.0",
+            },
+        })
     })
 
     return r

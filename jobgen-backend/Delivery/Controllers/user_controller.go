@@ -3,6 +3,7 @@ package controllers
 import (
 	domain "jobgen-backend/Domain"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -86,14 +87,20 @@ type ResendOTPRequest struct {
 // @Accept json
 // @Produce json
 // @Param request body RegisterRequest true "Registration details"
-// @Success 201 {object} map[string]interface{} "User registered successfully"
-// @Failure 400 {object} map[string]interface{} "Bad request"
-// @Failure 409 {object} map[string]interface{} "User already exists"
-// @Router /api/v1/auth/register [post]
+// @Success 201 {object} StandardResponse "User registered successfully"
+// @Failure 400 {object} StandardResponse "Bad request"
+// @Failure 409 {object} StandardResponse "User already exists"
+// @Router /auth/register [post]
 func (c *UserController) Register(ctx *gin.Context) {
 	var req RegisterRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ValidationErrorResponse(ctx, err)
+		return
+	}
+
+	// Validate required fields explicitly
+	if req.FullName == "" {
+		ErrorResponse(ctx, http.StatusBadRequest, "VALIDATION_ERROR", "Full name is required", nil)
 		return
 	}
 
@@ -110,21 +117,19 @@ func (c *UserController) Register(ctx *gin.Context) {
 	}
 
 	if err := c.userUsecase.Register(ctx, user); err != nil {
-		if err == domain.ErrEmailTaken {
-			ctx.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
-			return
+		switch err {
+		case domain.ErrEmailTaken:
+			ConflictResponse(ctx, "Email already registered")
+		case domain.ErrUsernameTaken:
+			ConflictResponse(ctx, "Username already taken")
+		default:
+			ErrorResponse(ctx, http.StatusBadRequest, "REGISTRATION_ERROR", err.Error(), nil)
 		}
-		if err == domain.ErrUsernameTaken {
-			ctx.JSON(http.StatusConflict, gin.H{"error": "Username already taken"})
-			return
-		}
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{
-		"message": "User registered successfully. Please check your email for verification code.",
-		"email":   req.Email,
+	SuccessResponse(ctx, http.StatusCreated, "User registered successfully. Please check your email for verification code.", gin.H{
+		"email": req.Email,
 	})
 }
 
@@ -134,14 +139,14 @@ func (c *UserController) Register(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body LoginRequest true "Login credentials"
-// @Success 200 {object} map[string]interface{} "Login successful with tokens"
-// @Failure 400 {object} map[string]interface{} "Bad request"
-// @Failure 401 {object} map[string]interface{} "Invalid credentials"
-// @Router /api/v1/auth/login [post]
+// @Success 200 {object} StandardResponse "Login successful with tokens"
+// @Failure 400 {object} StandardResponse "Bad request"
+// @Failure 401 {object} StandardResponse "Invalid credentials"
+// @Router /auth/login [post]
 func (c *UserController) Login(ctx *gin.Context) {
 	var req LoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ValidationErrorResponse(ctx, err)
 		return
 	}
 
@@ -149,13 +154,13 @@ func (c *UserController) Login(ctx *gin.Context) {
 	if err != nil {
 		switch err {
 		case domain.ErrInvalidCredentials:
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+			UnauthorizedResponse(ctx, "Invalid email or password")
 		case domain.ErrUserNotVerified:
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Please verify your email before logging in"})
+			UnauthorizedResponse(ctx, "Please verify your email before logging in")
 		case domain.ErrUserDeactivated:
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Your account has been deactivated"})
+			UnauthorizedResponse(ctx, "Your account has been deactivated")
 		default:
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Login failed"})
+			InternalErrorResponse(ctx, "Login failed")
 		}
 		return
 	}
@@ -172,8 +177,7 @@ func (c *UserController) Login(ctx *gin.Context) {
 		true, // httpOnly
 	)
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message":      "Login successful",
+	SuccessResponse(ctx, http.StatusOK, "Login successful", gin.H{
 		"access_token": tokens.AccessToken,
 	})
 }
@@ -184,13 +188,13 @@ func (c *UserController) Login(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body VerifyEmailRequest true "Verification details"
-// @Success 200 {object} map[string]interface{} "Email verified successfully"
-// @Failure 400 {object} map[string]interface{} "Bad request or invalid OTP"
-// @Router /api/v1/auth/verify-email [post]
+// @Success 200 {object} StandardResponse "Email verified successfully"
+// @Failure 400 {object} StandardResponse "Bad request or invalid OTP"
+// @Router /auth/verify-email [post]
 func (c *UserController) VerifyEmail(ctx *gin.Context) {
 	var req VerifyEmailRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ValidationErrorResponse(ctx, err)
 		return
 	}
 
@@ -201,16 +205,14 @@ func (c *UserController) VerifyEmail(ctx *gin.Context) {
 
 	if err := c.userUsecase.VerifyEmail(ctx, input); err != nil {
 		if err == domain.ErrInvalidOTP {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired OTP"})
+			ErrorResponse(ctx, http.StatusBadRequest, "INVALID_OTP", "Invalid or expired OTP", nil)
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Verification failed"})
+		InternalErrorResponse(ctx, "Verification failed")
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Email verified successfully. You can now login.",
-	})
+	SuccessResponse(ctx, http.StatusOK, "Email verified successfully. You can now login.", nil)
 }
 
 // @Summary Get user profile
@@ -219,28 +221,28 @@ func (c *UserController) VerifyEmail(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} domain.User "User profile"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Failure 404 {object} map[string]interface{} "User not found"
-// @Router /api/v1/users/profile [get]
+// @Success 200 {object} StandardResponse "User profile"
+// @Failure 401 {object} StandardResponse "Unauthorized"
+// @Failure 404 {object} StandardResponse "User not found"
+// @Router /users/profile [get]
 func (c *UserController) GetProfile(ctx *gin.Context) {
 	userID := ctx.GetString("user_id")
 	if userID == "" {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
+		UnauthorizedResponse(ctx, "User ID not found in token")
 		return
 	}
 
 	user, err := c.userUsecase.GetProfile(ctx, userID)
 	if err != nil {
 		if err == domain.ErrUserNotFound {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			NotFoundResponse(ctx, "User not found")
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get profile"})
+		InternalErrorResponse(ctx, "Failed to get profile")
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
+	SuccessResponse(ctx, http.StatusOK, "Profile retrieved successfully", gin.H{
 		"user": user,
 	})
 }
@@ -252,20 +254,20 @@ func (c *UserController) GetProfile(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param request body UpdateProfileRequest true "Profile updates"
-// @Success 200 {object} domain.User "Updated user profile"
-// @Failure 400 {object} map[string]interface{} "Bad request"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Router /api/v1/users/profile [put]
+// @Success 200 {object} StandardResponse "Updated user profile"
+// @Failure 400 {object} StandardResponse "Bad request"
+// @Failure 401 {object} StandardResponse "Unauthorized"
+// @Router /users/profile [put]
 func (c *UserController) UpdateProfile(ctx *gin.Context) {
 	userID := ctx.GetString("user_id")
 	if userID == "" {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
+		UnauthorizedResponse(ctx, "User ID not found in token")
 		return
 	}
 
 	var req UpdateProfileRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ValidationErrorResponse(ctx, err)
 		return
 	}
 
@@ -281,13 +283,12 @@ func (c *UserController) UpdateProfile(ctx *gin.Context) {
 
 	updatedUser, err := c.userUsecase.UpdateProfile(ctx, userID, profileUpdates)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		InternalErrorResponse(ctx, "Failed to update profile")
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Profile updated successfully",
-		"user":    updatedUser,
+	SuccessResponse(ctx, http.StatusOK, "Profile updated successfully", gin.H{
+		"user": updatedUser,
 	})
 }
 
@@ -297,30 +298,24 @@ func (c *UserController) UpdateProfile(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body RequestPasswordResetRequest true "Email address"
-// @Success 200 {object} map[string]interface{} "Password reset requested"
-// @Failure 400 {object} map[string]interface{} "Bad request"
-// @Failure 404 {object} map[string]interface{} "User not found"
-// @Router /api/v1/auth/request-password-reset [post]
+// @Success 200 {object} StandardResponse "Password reset requested"
+// @Failure 400 {object} StandardResponse "Bad request"
+// @Router /auth/forgot-password [post]
 func (c *UserController) RequestPasswordReset(ctx *gin.Context) {
-    var req RequestPasswordResetRequest
-    if err := ctx.ShouldBindJSON(&req); err != nil {
-        ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-        return
-    }
+	var req RequestPasswordResetRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ValidationErrorResponse(ctx, err)
+		return
+	}
 
-    _, err := c.userUsecase.RequestPasswordReset(ctx, req.Email)
-    if err != nil {
-        if err == domain.ErrUserNotFound {
-            ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-            return
-        }
-        ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to request password reset"})
-        return
-    }
+	_, err := c.userUsecase.RequestPasswordReset(ctx, req.Email)
+	if err != nil {
+		// For security, don't reveal if user exists or not
+		SuccessResponse(ctx, http.StatusOK, "If an account with that email exists, a password reset link has been sent", nil)
+		return
+	}
 
-    ctx.JSON(http.StatusOK, gin.H{
-        "message": "Password reset link has been sent to your email",
-    })
+	SuccessResponse(ctx, http.StatusOK, "Password reset link has been sent to your email", nil)
 }
 
 // @Summary Reset password
@@ -329,35 +324,33 @@ func (c *UserController) RequestPasswordReset(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body ResetPasswordRequest true "Password reset details"
-// @Success 200 {object} map[string]interface{} "Password reset successful"
-// @Failure 400 {object} map[string]interface{} "Bad request"
-// @Failure 404 {object} map[string]interface{} "User not found"
-// @Router /api/v1/auth/reset-password [post]
+// @Success 200 {object} StandardResponse "Password reset successful"
+// @Failure 400 {object} StandardResponse "Bad request"
+// @Router /auth/reset-password [post]
 func (c *UserController) ResetPassword(ctx *gin.Context) {
-    var req ResetPasswordRequest
-    if err := ctx.ShouldBindJSON(&req); err != nil {
-        ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-        return
-    }
+	var req ResetPasswordRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ValidationErrorResponse(ctx, err)
+		return
+	}
 
-    input := domain.ResetPasswordInput{
-        Token:       req.Token,
-        NewPassword: req.NewPassword,
-    }
+	input := domain.ResetPasswordInput{
+		Token:       req.Token,
+		NewPassword: req.NewPassword,
+	}
 
-    err := c.userUsecase.ResetPassword(ctx, input)
-    if err != nil {
-        if err == domain.ErrInvalidToken {
-            ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired token"})
-            return
-        }
-        ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset password"})
-        return
-    }
+	err := c.userUsecase.ResetPassword(ctx, input)
+	if err != nil {
+		switch err {
+		case domain.ErrInvalidToken, domain.ErrInvalidResetToken:
+			ErrorResponse(ctx, http.StatusBadRequest, "INVALID_TOKEN", "Invalid or expired reset token", nil)
+		default:
+			InternalErrorResponse(ctx, "Failed to reset password")
+		}
+		return
+	}
 
-    ctx.JSON(http.StatusOK, gin.H{
-        "message": "Password reset successful. You can now login with your new password.",
-    })
+	SuccessResponse(ctx, http.StatusOK, "Password reset successful. You can now login with your new password.", nil)
 }
 
 // @Summary Change password
@@ -367,119 +360,249 @@ func (c *UserController) ResetPassword(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param request body ChangePasswordRequest true "Password change details"
-// @Success 200 {object} map[string]interface{} "Password changed successfully"
-// @Failure 400 {object} map[string]interface{} "Bad request"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Router /api/v1/auth/change-password [post]
+// @Success 200 {object} StandardResponse "Password changed successfully"
+// @Failure 400 {object} StandardResponse "Bad request"
+// @Failure 401 {object} StandardResponse "Unauthorized"
+// @Router /auth/change-password [post]
 func (c *UserController) ChangePassword(ctx *gin.Context) {
 	var req ChangePasswordRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ValidationErrorResponse(ctx, err)
 		return
 	}
 
 	userID := ctx.GetString("user_id")
 	if userID == "" {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
+		UnauthorizedResponse(ctx, "User ID not found in token")
 		return
 	}
 
 	if err := c.userUsecase.ChangePassword(ctx, userID, req.OldPassword, req.NewPassword); err != nil {
 		if err == domain.ErrInvalidCredentials {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid old password"})
+			UnauthorizedResponse(ctx, "Invalid old password")
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to change password"})
+		InternalErrorResponse(ctx, "Failed to change password")
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Password changed successfully",
-	})
+	SuccessResponse(ctx, http.StatusOK, "Password changed successfully", nil)
 }
 
 // @Summary Delete account
 // @Description Delete the user's account permanently
-// @Tags Authentication
+// @Tags User Profile
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} map[string]interface{} "Account deleted successfully"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Router /api/v1/auth/delete-account [delete]
+// @Success 200 {object} StandardResponse "Account deleted successfully"
+// @Failure 401 {object} StandardResponse "Unauthorized"
+// @Router /users/account [delete]
 func (c *UserController) DeleteAccount(ctx *gin.Context) {
 	userID := ctx.GetString("user_id")
 	if userID == "" {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
+		UnauthorizedResponse(ctx, "User ID not found in token")
 		return
 	}
 
 	if err := c.userUsecase.DeleteAccount(ctx, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete account"})
+		InternalErrorResponse(ctx, "Failed to delete account")
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Account deleted successfully",
-	})
+	SuccessResponse(ctx, http.StatusOK, "Account deleted successfully", nil)
 }
 
 // @Summary Get users
-// @Description Get a list of users (admin)
+// @Description Get a list of users (admin only)
 // @Tags Admin
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {array} domain.User "List of users"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Router /api/v1/admin/users [get]
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Param role query string false "Filter by role" Enums(user, admin)
+// @Param active query bool false "Filter by active status"
+// @Param search query string false "Search in email, username, or full name"
+// @Param sort_by query string false "Sort field" default(created_at)
+// @Param sort_order query string false "Sort order" Enums(asc, desc) default(desc)
+// @Success 200 {object} StandardResponse "List of users"
+// @Failure 401 {object} StandardResponse "Unauthorized"
+// @Failure 403 {object} StandardResponse "Forbidden"
+// @Router /admin/users [get]
 func (c *UserController) GetUsers(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, gin.H{"message": "Get users endpoint"})
+	if ctx.IsAborted() {
+		return
+	}
+	// Parse query parameters
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+	
+	filter := domain.UserFilter{
+		Page:      page,
+		Limit:     limit,
+		Search:    ctx.Query("search"),
+		SortBy:    ctx.DefaultQuery("sort_by", "created_at"),
+		SortOrder: ctx.DefaultQuery("sort_order", "desc"),
+	}
+	
+	if role := ctx.Query("role"); role != "" {
+		r := domain.Role(role)
+		filter.Role = &r
+	}
+	
+	if active := ctx.Query("active"); active != "" {
+		isActive := active == "true"
+		filter.IsActive = &isActive
+	}
+
+	result, err := c.userUsecase.GetUsers(ctx, filter)
+	if err != nil {
+		InternalErrorResponse(ctx, "Failed to get users")
+		return
+	}
+
+	paginatedData := &PaginatedResponse{
+		Items:      result.Users,
+		Page:       result.Page,
+		Limit:      result.Limit,
+		Total:      result.Total,
+		TotalPages: result.TotalPages,
+		HasNext:    result.HasNext,
+		HasPrev:    result.HasPrev,
+	}
+
+	PaginatedSuccessResponse(ctx, http.StatusOK, "Users retrieved successfully", paginatedData)
 }
 
 // @Summary Update user role
-// @Description Update the role of a user (admin)
+// @Description Update the role of a user (admin only)
 // @Tags Admin
 // @Accept json
 // @Produce json
 // @Security BearerAuth
+// @Param user_id path string true "User ID"
 // @Param request body UpdateUserRoleRequest true "Role update details"
-// @Success 200 {object} map[string]interface{} "User role updated successfully"
-// @Failure 400 {object} map[string]interface{} "Bad request"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Router /api/v1/admin/users/role [put]
+// @Success 200 {object} StandardResponse "User role updated successfully"
+// @Failure 400 {object} StandardResponse "Bad request"
+// @Failure 401 {object} StandardResponse "Unauthorized"
+// @Failure 403 {object} StandardResponse "Forbidden"
+// @Router /admin/users/{user_id}/role [put]
 func (c *UserController) UpdateUserRole(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, gin.H{"message": "Update user role endpoint"})
+	adminUserID := ctx.GetString("user_id")
+	targetUserID := ctx.Param("user_id")
+	
+	if adminUserID == "" {
+		UnauthorizedResponse(ctx, "Admin user ID not found in token")
+		return
+	}
+	
+	if targetUserID == "" {
+		ErrorResponse(ctx, http.StatusBadRequest, "VALIDATION_ERROR", "User ID is required", nil)
+		return
+	}
+
+	var req UpdateUserRoleRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ValidationErrorResponse(ctx, err)
+		return
+	}
+
+	if err := c.userUsecase.UpdateUserRole(ctx, adminUserID, targetUserID, req.Role); err != nil {
+		switch err {
+		case domain.ErrForbidden:
+			ForbiddenResponse(ctx, "Cannot change your own role")
+		case domain.ErrUserNotFound:
+			NotFoundResponse(ctx, "User not found")
+		default:
+			InternalErrorResponse(ctx, "Failed to update user role")
+		}
+		return
+	}
+
+	SuccessResponse(ctx, http.StatusOK, "User role updated successfully", nil)
 }
 
 // @Summary Toggle user status
-// @Description Activate or deactivate a user account (admin)
+// @Description Activate or deactivate a user account (admin only)
 // @Tags Admin
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param user_id path string true "User ID"
-// @Success 200 {object} map[string]interface{} "User status toggled successfully"
-// @Failure 400 {object} map[string]interface{} "Bad request"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Router /api/v1/admin/users/status/{user_id} [post]
+// @Success 200 {object} StandardResponse "User status toggled successfully"
+// @Failure 400 {object} StandardResponse "Bad request"
+// @Failure 401 {object} StandardResponse "Unauthorized"
+// @Failure 403 {object} StandardResponse "Forbidden"
+// @Router /admin/users/{user_id}/toggle-status [put]
 func (c *UserController) ToggleUserStatus(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, gin.H{"message": "Toggle user status endpoint"})
+	adminUserID := ctx.GetString("user_id")
+	targetUserID := ctx.Param("user_id")
+	
+	if adminUserID == "" {
+		UnauthorizedResponse(ctx, "Admin user ID not found in token")
+		return
+	}
+	
+	if targetUserID == "" {
+		ErrorResponse(ctx, http.StatusBadRequest, "VALIDATION_ERROR", "User ID is required", nil)
+		return
+	}
+
+	if err := c.userUsecase.ToggleUserStatus(ctx, adminUserID, targetUserID); err != nil {
+		switch err {
+		case domain.ErrForbidden:
+			ForbiddenResponse(ctx, "Cannot change your own status")
+		case domain.ErrUserNotFound:
+			NotFoundResponse(ctx, "User not found")
+		default:
+			InternalErrorResponse(ctx, "Failed to toggle user status")
+		}
+		return
+	}
+
+	SuccessResponse(ctx, http.StatusOK, "User status updated successfully", nil)
 }
 
 // @Summary Delete user
-// @Description Delete a user account (admin)
+// @Description Delete a user account (admin only)
 // @Tags Admin
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param user_id path string true "User ID"
-// @Success 200 {object} map[string]interface{} "User deleted successfully"
-// @Failure 400 {object} map[string]interface{} "Bad request"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Router /api/v1/admin/users/{user_id} [delete]
+// @Success 200 {object} StandardResponse "User deleted successfully"
+// @Failure 400 {object} StandardResponse "Bad request"
+// @Failure 401 {object} StandardResponse "Unauthorized"
+// @Failure 403 {object} StandardResponse "Forbidden"
+// @Router /admin/users/{user_id} [delete]
 func (c *UserController) DeleteUser(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, gin.H{"message": "Delete user endpoint"})
+	adminUserID := ctx.GetString("user_id")
+	targetUserID := ctx.Param("user_id")
+	
+	if adminUserID == "" {
+		UnauthorizedResponse(ctx, "Admin user ID not found in token")
+		return
+	}
+	
+	if targetUserID == "" {
+		ErrorResponse(ctx, http.StatusBadRequest, "VALIDATION_ERROR", "User ID is required", nil)
+		return
+	}
+
+	if err := c.userUsecase.DeleteUser(ctx, adminUserID, targetUserID); err != nil {
+		switch err {
+		case domain.ErrForbidden:
+			ForbiddenResponse(ctx, "Cannot delete your own account")
+		case domain.ErrUserNotFound:
+			NotFoundResponse(ctx, "User not found")
+		default:
+			InternalErrorResponse(ctx, "Failed to delete user")
+		}
+		return
+	}
+
+	SuccessResponse(ctx, http.StatusOK, "User deleted successfully", nil)
 }
 
 // @Summary Resend OTP
@@ -488,24 +611,30 @@ func (c *UserController) DeleteUser(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body ResendOTPRequest true "Email address"
-// @Success 200 {object} map[string]interface{} "OTP resent successfully"
-// @Failure 400 {object} map[string]interface{} "Bad request"
-// @Failure 404 {object} map[string]interface{} "User not found"
-// @Router /api/v1/auth/resend-otp [post]
+// @Success 200 {object} StandardResponse "OTP resent successfully"
+// @Failure 400 {object} StandardResponse "Bad request"
+// @Failure 404 {object} StandardResponse "User not found"
+// @Router /auth/resend-otp [post]
 func (c *UserController) ResendOTP(ctx *gin.Context) {
     var req ResendOTPRequest
     if err := ctx.ShouldBindJSON(&req); err != nil {
-        ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        ValidationErrorResponse(ctx, err)
         return
     }
+    
     err := c.userUsecase.ResendOTP(ctx, req.Email)
     if err != nil {
         if err == domain.ErrUserNotFound {
-            ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+            NotFoundResponse(ctx, "User not found")
             return
         }
-        ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resend OTP"})
+        if err == domain.ErrAlreadyVerified {
+            ErrorResponse(ctx, http.StatusBadRequest, "ALREADY_VERIFIED", "Email is already verified", nil)
+            return
+        }
+        InternalErrorResponse(ctx, "Failed to resend OTP")
         return
     }
-    ctx.JSON(http.StatusOK, gin.H{"message": "Verification code resent to your email"})
+    
+    SuccessResponse(ctx, http.StatusOK, "Verification code resent to your email", nil)
 }
