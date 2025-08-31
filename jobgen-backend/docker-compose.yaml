@@ -6,20 +6,22 @@ services:
     build: .
     ports:
       - "8080:8080"
+    env_file:
+      - .env # local development .env (DO NOT COMMIT)
     environment:
-      - MONGODB_URI=mongodb://mongo:27017
-      - DB_NAME=jobgen
-      - JWT_SECRET=super-secret-jwt-key-for-development
-      - ACCESS_TOKEN_DURATION=24h
-      - REFRESH_TOKEN_DURATION=168h
-      - PORT=8080
-      - ENVIRONMENT=development
-      - EMAIL_FROM=noreply@jobgen.io
-      - EMAIL_HOST=smtp.gmail.com
-      - EMAIL_PORT=587
+      - MONGODB_URI=${MONGODB_URI}
+      - DB_NAME=${DB_NAME:-jobgen}
+      - JWT_SECRET=${JWT_SECRET}
+      - ACCESS_TOKEN_DURATION=${ACCESS_TOKEN_DURATION:-24h}
+      - REFRESH_TOKEN_DURATION=${REFRESH_TOKEN_DURATION:-168h}
+      - PORT=${PORT:-8080}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
       - EMAIL_USERNAME=${EMAIL_USERNAME}
       - EMAIL_PASSWORD=${EMAIL_PASSWORD}
-      - FRONTEND_URL=http://localhost:3000
+      - FRONTEND_URL=${FRONTEND_URL}
     depends_on:
       - mongo
     restart: unless-stopped
@@ -38,11 +40,13 @@ services:
     image: mongo-express:latest
     ports:
       - "8081:8081"
+    env_file:
+      - .env
     environment:
-      - ME_CONFIG_MONGODB_SERVER=mongo
-      - ME_CONFIG_MONGODB_PORT=27017
-      - ME_CONFIG_BASICAUTH_USERNAME=admin
-      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+      - ME_CONFIG_MONGODB_SERVER=${ME_CONFIG_MONGODB_SERVER:-mongo}
+      - ME_CONFIG_MONGODB_PORT=${ME_CONFIG_MONGODB_PORT:-27017}
+      - ME_CONFIG_BASICAUTH_USERNAME=${ME_CONFIG_BASICAUTH_USERNAME}
+      - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD}
     depends_on:
       - mongo
     restart: unless-stopped
