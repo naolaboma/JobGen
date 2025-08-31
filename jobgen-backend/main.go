@@ -1,3 +1,16 @@
+package main
+
+import (
+	controllers "jobgen-backend/Delivery/Controllers"
+	router "jobgen-backend/Delivery/Router"
+	infrastructure "jobgen-backend/Infrastructure"
+	repositories "jobgen-backend/Repositories"
+	usecases "jobgen-backend/Usecases"
+	_ "jobgen-backend/docs" // This line is important for swagger
+	"log"
+	"time"
+)
+
 // @title JobGen API
 // @version 1.0
 // @description AI-Powered Remote Job Finder & CV Optimizer API
@@ -12,23 +25,11 @@
 
 // @host localhost:8080
 // @BasePath /api/v1
+
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
 // @description Type "Bearer" followed by a space and JWT token.
-
-package main
-
-import (
-	controllers "jobgen-backend/Delivery/Controllers"
-	router "jobgen-backend/Delivery/Router"
-	infrastructure "jobgen-backend/Infrastructure"
-	repositories "jobgen-backend/Repositories"
-	usecases "jobgen-backend/Usecases"
-	_ "jobgen-backend/docs" // This line is important for swagger
-	"log"
-	"time"
-)
 
 func main() {
 	// Load environment variables
@@ -89,4 +90,18 @@ func main() {
 	if err := router.Run(":" + port); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
+}
+
+// Additional model definitions for Swagger
+type StandardResponse struct {
+	Success bool        `json:"success" example:"true"`
+	Message string      `json:"message" example:"Operation completed successfully"`
+	Data    interface{} `json:"data,omitempty"`
+	Error   *ErrorInfo  `json:"error,omitempty"`
+}
+
+type ErrorInfo struct {
+	Code    string      `json:"code" example:"VALIDATION_ERROR"`
+	Message string      `json:"message" example:"Invalid input provided"`
+	Details interface{} `json:"details,omitempty"`
 }
