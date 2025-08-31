@@ -1,0 +1,51 @@
+name: Go CI
+
+on:
+  push:
+    branches:
+      - main
+      - feat/backend
+  pull_request:
+    branches:
+      - main
+      - feat/backend
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      mongo:
+        image: mongo:6
+        ports:
+          - 27017:27017
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+
+      - name: Wait for MongoDB
+        run: |
+          for i in {1..15}; do
+            if nc -z localhost 27017; then
+              echo "MongoDB is up"
+              exit 0
+            fi
+            echo "Waiting for MongoDB..."
+            sleep 2
+          done
+          echo "MongoDB did not start in time" && exit 1
+
+      - name: Install dependencies
+        run: go mod tidy
+        working-directory: jobgen-backend
+
+      - name: Run tests
+        # run all tests under the module (or change to ./tests/... if you prefer)
+        run: go test -v ./tests/...
+        working-directory: jobgen-backend
