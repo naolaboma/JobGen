@@ -6,6 +6,7 @@ import (
 	domain "jobgen-backend/Domain"
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -48,12 +49,12 @@ func (u *userUsecase) Register(ctx context.Context, user *domain.User) error {
 	ctx, cancel := context.WithTimeout(ctx, u.contextTimeout)
 	defer cancel()
 
-	// Validate required fields
-	if user.Email == "" || user.Username == "" || user.Password == "" || user.FullName == "" {
-		return domain.ErrInvalidInput
+	// Validate required fields BEFORE any database operations
+	if err := u.validateUserInput(user); err != nil {
+		return err
 	}
 
-	// Validate password strength
+	// Validate password strength BEFORE hashing
 	if err := u.passwordService.ValidateStrength(user.Password); err != nil {
 		return err
 	}
@@ -69,10 +70,14 @@ func (u *userUsecase) Register(ctx context.Context, user *domain.User) error {
 	user.Role = domain.RoleUser
 	user.IsVerified = false
 	user.IsActive = true
-	user.Skills = []string{}
-	user.ExperienceYears = 0
+	if user.Skills == nil {
+		user.Skills = []string{}
+	}
+	if user.ExperienceYears < 0 {
+		user.ExperienceYears = 0
+	}
 
-	// Create user
+	// Create user - this will check for duplicates
 	if err := u.userRepo.Create(ctx, user); err != nil {
 		return err
 	}
@@ -83,17 +88,49 @@ func (u *userUsecase) Register(ctx context.Context, user *domain.User) error {
 		Email:     user.Email,
 		OTP:       otp,
 		ExpiresAt: time.Now().Add(15 * time.Minute),
+		CreatedAt: time.Now(),
 		Used:      false,
 	}
 
 	// Store verification
 	if err := u.emailVerificationRepo.Store(ctx, verification); err != nil {
+		// If email verification fails, we should clean up the user
+		u.userRepo.Delete(ctx, user.ID)
 		return fmt.Errorf("failed to store email verification: %w", err)
 	}
 
 	// Send welcome email with OTP
 	if err := u.emailService.SendWelcomeEmail(ctx, user, otp); err != nil {
-		return fmt.Errorf("failed to send welcome email: %w", err)
+		// Log error but don't fail registration
+		fmt.Printf("Failed to send welcome email: %v\n", err)
+	}
+
+	return nil
+}
+
+func (u *userUsecase) validateUserInput(user *domain.User) error {
+	// Validate required fields
+	if strings.TrimSpace(user.Email) == "" {
+		return fmt.Errorf("email is required")
+	}
+	if strings.TrimSpace(user.Username) == "" {
+		return fmt.Errorf("username is required")
+	}
+	if strings.TrimSpace(user.Password) == "" {
+		return fmt.Errorf("password is required")
+	}
+	if strings.TrimSpace(user.FullName) == "" {
+		return fmt.Errorf("full name is required")
+	}
+
+	// Validate username length
+	if len(user.Username) < 3 || len(user.Username) > 30 {
+		return fmt.Errorf("username must be between 3 and 30 characters")
+	}
+
+	// Validate full name length
+	if len(user.FullName) < 1 || len(user.FullName) > 100 {
+		return fmt.Errorf("full name must be between 1 and 100 characters")
 	}
 
 	return nil
@@ -140,6 +177,8 @@ func (u *userUsecase) Login(ctx context.Context, email, password string) (*domai
 		TokenID:   refreshPayload.TokenID,
 		Token:     refreshToken,
 		UserID:    user.ID,
+		CreatedAt: refreshPayload.IssuedAt,
+		UpdatedAt: refreshPayload.IssuedAt,
 		ExpiresAt: refreshPayload.ExpiresAt,
 	}
 
@@ -163,56 +202,53 @@ func (u *userUsecase) VerifyEmail(ctx context.Context, input domain.VerifyEmailI
 	ctx, cancel := context.WithTimeout(ctx, u.contextTimeout)
 	defer cancel()
 
-	// fetch verification by otp & email
+	// Validate input
+	if strings.TrimSpace(input.Email) == "" || strings.TrimSpace(input.OTP) == "" {
+		return domain.ErrInvalidInput
+	}
+
+	// Get verification by OTP & email
 	verification, err := u.emailVerificationRepo.GetByOTP(ctx, input.OTP, input.Email)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get verification: %w", err)
 	}
 	if verification == nil {
 		return domain.ErrInvalidOTP
 	}
 
-	// check if OTP was already used
+	// Check if OTP was already used
 	if verification.Used {
-		return domain.ErrInvalidOTP
+		return domain.ErrOTPUsed
 	}
 
-	// check expiration: prefer ExpiresAt if present, otherwise CreatedAt + 15min
-	now := time.Now()
-	expiry := verification.ExpiresAt
-	if expiry.IsZero() && !verification.CreatedAt.IsZero() {
-		expiry = verification.CreatedAt.Add(15 * time.Minute)
-	}
-	if expiry.IsZero() || now.After(expiry) {
-		return fmt.Errorf("verification code expired")
+	// Check expiration
+	if time.Now().After(verification.ExpiresAt) {
+		return domain.ErrOTPExpired
 	}
 
-	// load user
+	// Get user by email
 	user, err := u.userRepo.GetByEmail(ctx, input.Email)
 	if err != nil {
-		return err
-	}
-	if user == nil {
-		return fmt.Errorf("user not found")
+		return domain.ErrUserNotFound
 	}
 
-	// if already verified, consume OTP and return
+	// If already verified, just mark OTP as used and return success
 	if user.IsVerified {
 		if err := u.emailVerificationRepo.MarkUsed(ctx, verification.ID); err != nil {
-			return fmt.Errorf("failed to mark verification as used: %w", err)
+			fmt.Printf("Warning: failed to mark verification as used: %v\n", err)
 		}
 		return nil
 	}
 
-	// set verified and persist
+	// Mark verification as used FIRST
+	if err := u.emailVerificationRepo.MarkUsed(ctx, verification.ID); err != nil {
+		return fmt.Errorf("failed to mark verification as used: %w", err)
+	}
+
+	// Update user verification status
 	user.IsVerified = true
 	if err := u.userRepo.Update(ctx, user); err != nil {
 		return fmt.Errorf("failed to verify user: %w", err)
-	}
-
-	// mark verification as used. If this fails, attempt best-effort user verification
-	if err := u.emailVerificationRepo.MarkUsed(ctx, verification.ID); err != nil {
-		fmt.Printf("Warning: failed to mark verification as used: %v\n", err)
 	}
 
 	return nil
@@ -229,26 +265,26 @@ func (u *userUsecase) UpdateProfile(ctx context.Context, userID string, updates 
 	}
 
 	// Apply updates
-	if updates.FullName != nil {
-		user.FullName = *updates.FullName
+	if updates.FullName != nil && strings.TrimSpace(*updates.FullName) != "" {
+		user.FullName = strings.TrimSpace(*updates.FullName)
 	}
 	if updates.PhoneNumber != nil {
-		user.PhoneNumber = *updates.PhoneNumber
+		user.PhoneNumber = strings.TrimSpace(*updates.PhoneNumber)
 	}
 	if updates.Location != nil {
-		user.Location = *updates.Location
+		user.Location = strings.TrimSpace(*updates.Location)
 	}
 	if updates.Skills != nil {
 		user.Skills = *updates.Skills
 	}
-	if updates.ExperienceYears != nil {
+	if updates.ExperienceYears != nil && *updates.ExperienceYears >= 0 {
 		user.ExperienceYears = *updates.ExperienceYears
 	}
 	if updates.Bio != nil {
-		user.Bio = *updates.Bio
+		user.Bio = strings.TrimSpace(*updates.Bio)
 	}
 	if updates.ProfilePicture != nil {
-		user.ProfilePicture = *updates.ProfilePicture
+		user.ProfilePicture = strings.TrimSpace(*updates.ProfilePicture)
 	}
 
 	// Update user
@@ -256,6 +292,9 @@ func (u *userUsecase) UpdateProfile(ctx context.Context, userID string, updates 
 		return nil, fmt.Errorf("failed to update profile: %w", err)
 	}
 
+	// Clear password from response
+	user.Password = ""
+	
 	return user, nil
 }
 
@@ -305,8 +344,9 @@ func (u *userUsecase) RequestPasswordReset(ctx context.Context, email string) (s
 	// Get user by email
 	user, err := u.userRepo.GetByEmail(ctx, email)
 	if err != nil {
-		// Don't reveal if email exists or not
-		return "", nil
+		// For security, don't reveal if email exists or not
+		// But still return an error so the caller knows something went wrong
+		return "", domain.ErrUserNotFound
 	}
 
 	// Generate reset token
@@ -326,6 +366,7 @@ func (u *userUsecase) RequestPasswordReset(ctx context.Context, email string) (s
 		UserID:    user.ID,
 		TokenHash: string(hashedToken),
 		ExpiresAt: time.Now().Add(1 * time.Hour),
+		CreatedAt: time.Now(),
 		Used:      false,
 	}
 
@@ -345,18 +386,36 @@ func (u *userUsecase) ResetPassword(ctx context.Context, input domain.ResetPassw
 	ctx, cancel := context.WithTimeout(ctx, u.contextTimeout)
 	defer cancel()
 
+	// Validate input
+	if strings.TrimSpace(input.Token) == "" || strings.TrimSpace(input.NewPassword) == "" {
+		return domain.ErrInvalidInput
+	}
+
 	// Validate new password
 	if err := u.passwordService.ValidateStrength(input.NewPassword); err != nil {
 		return err
 	}
 
-	// Get reset token
+	// Get reset token - this will validate the token hash
 	resetToken, err := u.passwordResetRepo.GetByTokenHash(ctx, input.Token)
 	if err != nil {
-		return err
+		return domain.ErrInvalidResetToken
+	}
+	if resetToken == nil {
+		return domain.ErrInvalidResetToken
 	}
 
-	// Mark token as used
+	// Check if token was already used
+	if resetToken.Used {
+		return domain.ErrInvalidResetToken
+	}
+
+	// Check if token is expired
+	if time.Now().After(resetToken.ExpiresAt) {
+		return domain.ErrInvalidResetToken
+	}
+
+	// Mark token as used FIRST
 	if err := u.passwordResetRepo.MarkUsed(ctx, resetToken.ID); err != nil {
 		return fmt.Errorf("failed to mark reset token as used: %w", err)
 	}
@@ -384,6 +443,10 @@ func (u *userUsecase) GetProfile(ctx context.Context, userID string) (*domain.Us
 	ctx, cancel := context.WithTimeout(ctx, u.contextTimeout)
 	defer cancel()
 
+	if strings.TrimSpace(userID) == "" {
+		return nil, domain.ErrInvalidInput
+	}
+
 	user, err := u.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -399,7 +462,7 @@ func (u *userUsecase) DeleteAccount(ctx context.Context, userID string) error {
 	ctx, cancel := context.WithTimeout(ctx, u.contextTimeout)
 	defer cancel()
 
-	// Delete all refresh tokens
+	// Delete all refresh tokens first
 	if err := u.refreshTokenRepo.DeleteAllTokensForUser(ctx, userID); err != nil {
 		fmt.Printf("Failed to delete user tokens: %v\n", err)
 	}
@@ -457,6 +520,7 @@ func (u *userUsecase) UpdateUserRole(ctx context.Context, adminUserID, targetUse
 
 	// Get target user for notification
 	user, err := u.userRepo.GetByID(ctx, targetUserID)
+	fmt.Println("User found that needed to be updated from Admin", user, targetUserID)
 	if err != nil {
 		return err
 	}
@@ -499,10 +563,8 @@ func (u *userUsecase) ToggleUserStatus(ctx context.Context, adminUserID, targetU
 		if err := u.emailService.SendAccountDeactivationEmail(ctx, user); err != nil {
 			fmt.Printf("Failed to send deactivation notification: %v\n", err)
 		}
-	}
-
-	// Revoke all refresh tokens if user is deactivated
-	if user.IsActive {
+		
+		// Revoke all refresh tokens if user is being deactivated
 		if err := u.refreshTokenRepo.DeleteAllTokensForUser(ctx, targetUserID); err != nil {
 			fmt.Printf("Failed to revoke user tokens: %v\n", err)
 		}
@@ -535,29 +597,34 @@ func (u *userUsecase) generateOTP() string {
 }
 
 func (u *userUsecase) ResendOTP(ctx context.Context, email string) error {
-	ctx, cancel := context.WithTimeout(ctx, u.contextTimeout)
-	defer cancel()
+    ctx, cancel := context.WithTimeout(ctx, u.contextTimeout)
+    defer cancel()
 
-	user, err := u.userRepo.GetByEmail(ctx, email)
-	if err != nil {
-		return domain.ErrUserNotFound
-	}
-	if user.IsVerified {
-		return nil // Already verified, no need to resend
-	}
+    user, err := u.userRepo.GetByEmail(ctx, email)
+    if err != nil {
+        return domain.ErrUserNotFound
+    }
+    
+    if user.IsVerified {
+        return domain.ErrAlreadyVerified 
+    }
 
-	otp := u.generateOTP()
+    otp := u.generateOTP()
 	verification := &domain.EmailVerification{
 		Email:     email,
 		OTP:       otp,
 		ExpiresAt: time.Now().Add(15 * time.Minute),
+		CreatedAt: time.Now(),
 		Used:      false,
 	}
+	
 	if err := u.emailVerificationRepo.Store(ctx, verification); err != nil {
 		return fmt.Errorf("failed to store email verification: %w", err)
 	}
+	
 	if err := u.emailService.SendWelcomeEmail(ctx, user, otp); err != nil {
 		return fmt.Errorf("failed to send welcome email: %w", err)
 	}
+	
 	return nil
 }
