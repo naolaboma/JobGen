@@ -1,0 +1,49 @@
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Go binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+jobgen-backend
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# # Swagger generated files
+# docs/docs.go
+# docs/swagger.json
+# docs/swagger.yaml
+
+# Temporary files
+tmp/
+temp/
