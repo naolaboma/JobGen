@@ -67,7 +67,7 @@ func SetupRouter(
 		}
 
 		file := api.Group("/file")
-		// file.Use(authMiddleware.RequireAuth())
+		file.Use(authMiddleware.RequireAuth())
 		{
 			file.GET("/:id", fileController.DownloadFile)
 			file.GET("/profile-picture/:id", fileController.GetProfilePicture)

@@ -160,7 +160,6 @@ func (fc *FileController) uploadFile(c *gin.Context, bucket string) {
 // @Security BearerAuth
 // @Router /api/v1/file/download/{id} [get]
 func (fc *FileController) DownloadFile(c *gin.Context) {
-	c.Set("user_id", "henok")
 	userID := c.GetString("user_id")
 	if userID == "" {
 		UnauthorizedResponse(c, "user id not found in context")
