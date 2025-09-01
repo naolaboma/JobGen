@@ -88,9 +88,10 @@ func main() {
 
 	// --- Repository ---
 	fileRepo := repositories.NewFileRepository(db)
+	fileUsecase := usecases.NewFileUsecase(fileRepo, minioService)
 
 	// --- Controller ---
-	fileController := controllers.NewFileController(fileRepo, minioService)
+	fileController := controllers.NewFileController(fileUsecase)
 	// ----------------------------
 
 	// Setup router

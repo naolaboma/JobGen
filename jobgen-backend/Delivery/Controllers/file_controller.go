@@ -2,7 +2,6 @@ package controllers
 
 import (
 	domain "jobgen-backend/Domain"
-	usecases "jobgen-backend/Usecases"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -13,9 +12,9 @@ type FileController struct {
 	fileUsecase domain.IFileUsecase
 }
 
-func NewFileController(fileRepo domain.IFileRepository, fileService domain.IFileService) *FileController {
+func NewFileController(fileUsecase domain.IFileUsecase) *FileController {
 	return &FileController{
-		fileUsecase: usecases.NewFileUsecase(fileRepo, fileService),
+		fileUsecase: fileUsecase,
 	}
 }
 
