@@ -1,12 +1,14 @@
 package usecases
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
 	domain "jobgen-backend/Domain"
 	"time"
 
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/google/uuid"
 )
 
@@ -109,8 +111,18 @@ func (f *fileUsecase) Exists(ctx context.Context, ID string) (bool, error) {
 
 // Upload implements domain.IFileUsecase.
 func (f *fileUsecase) Upload(ctx context.Context, file io.Reader, metaData *domain.File) (*domain.File, error) {
+	// Wrap the original reader with bufio.Reader so we can peek without consuming
+	br := bufio.NewReader(file)
 
+	// Peek first 512 bytes to detect MIME type
+	head, err := br.Peek(512)
+	if err != nil && err != io.EOF {
+		return nil, fmt.Errorf("failed to peek file for MIME detection: %w", domain.ErrInternal)
+	}
+	mime := mimetype.Detect(head)
+	metaData.ContentType = mime.String()
 	// filters and check for valid data type
+
 	switch metaData.BucketName {
 	case "profile-pictures":
 		if metaData.ContentType != "image/jpeg" && metaData.ContentType != "image/png" {
@@ -127,7 +139,7 @@ func (f *fileUsecase) Upload(ctx context.Context, file io.Reader, metaData *doma
 	// generates a unique keyname for the object
 	metaData.UniqueID = generateKeyName(metaData)
 	metaData.CreatedAt = time.Now()
-	err := f.s3s.Upload(ctx, metaData.BucketName, metaData.UniqueID, file, metaData.ContentType, metaData.Size)
+	err = f.s3s.Upload(ctx, metaData.BucketName, metaData.UniqueID, br, metaData.ContentType, metaData.Size)
 	if err != nil {
 		return nil, err
 	}

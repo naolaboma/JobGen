@@ -117,7 +117,6 @@ func (fc *FileController) uploadFile(c *gin.Context, bucket string) {
 		UserID:      userID,
 		BucketName:  bucket,
 		FileName:    fileHeader.Filename,
-		ContentType: fileHeader.Header.Get("Content-Type"),
 		Size:        fileHeader.Size,
 	}
 
@@ -177,7 +176,7 @@ func (fc *FileController) DownloadFile(c *gin.Context) {
 	}
 
 	// Return presigned URL as plain text
-	c.String(http.StatusOK, url)
+	SuccessResponse(c, http.StatusOK, url, nil)
 }
 
 // GetMyProfilePicture returns a presigned URL for the current user's profile picture
@@ -211,7 +210,7 @@ func (fc *FileController) GetMyProfilePicture(c *gin.Context) {
 	}
 
 	// Return the presigned URL
-	c.String(http.StatusOK, url)
+	SuccessResponse(c, http.StatusOK, url, nil)
 }
 
 // GetProfilePicture returns a presigned URL for a user's profile picture
@@ -245,5 +244,5 @@ func (fc *FileController) GetProfilePicture(c *gin.Context) {
 	}
 
 	// Return the presigned URL
-	c.String(http.StatusOK, url)
+	SuccessResponse(c, http.StatusOK, url, nil)
 }
