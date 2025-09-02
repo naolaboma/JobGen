@@ -66,15 +66,15 @@ func SetupRouter(
 			admin.DELETE("/users/:user_id", userController.DeleteUser)
 		}
 
-		file := api.Group("/file")
-		file.Use(authMiddleware.RequireAuth())
+		files := api.Group("/files")
+		files.Use(authMiddleware.RequireAuth())
 		{
-			file.GET("/:id", fileController.DownloadFile)
-			file.GET("/profile-picture/:id", fileController.GetProfilePicture)
-			file.GET("/profile-picture/me", fileController.GetMyProfilePicture)
-			file.POST("/upload/profile", fileController.UploadProfile)
-			file.POST("/upload/document", fileController.UploadDocument)
-			file.DELETE("/:id", fileController.DeleteFile)
+			files.GET("/:id", fileController.DownloadFile)
+			files.GET("/profile-picture/:id", fileController.GetProfilePicture)
+			files.GET("/profile-picture/me", fileController.GetMyProfilePicture)
+			files.POST("/upload/profile", fileController.UploadProfile)
+			files.POST("/upload/document", fileController.UploadDocument)
+			files.DELETE("/:id", fileController.DeleteFile)
 		}
 	}
 

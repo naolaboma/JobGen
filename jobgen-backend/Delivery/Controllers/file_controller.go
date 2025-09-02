@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type FileController struct {
@@ -114,9 +113,7 @@ func (fc *FileController) uploadFile(c *gin.Context, bucket string) {
 	defer file.Close()
 
 	// Generate UUID for file key
-	fileUUID := uuid.NewString()
 	data := domain.File{
-		UniqueID:    fileUUID,
 		UserID:      userID,
 		BucketName:  bucket,
 		FileName:    fileHeader.Filename,

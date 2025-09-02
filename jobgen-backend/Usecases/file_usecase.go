@@ -6,6 +6,8 @@ import (
 	"io"
 	domain "jobgen-backend/Domain"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type fileUsecase struct {
@@ -22,6 +24,7 @@ func generateKeyName(file *domain.File) string {
 
 	// If it's a profile picture, just use userID
 	// this will override the old profile picture
+	uuid := uuid.NewString()
 	if file.BucketName == "profile-pictures" {
 		return file.UserID
 	}
@@ -29,13 +32,13 @@ func generateKeyName(file *domain.File) string {
 	// If it's a document, use userID as a folder
 	if file.BucketName == "documents" {
 		if file.UserID != "" {
-			return fmt.Sprintf("%s/%s-%s", file.UserID, file.UniqueID, file.FileName)
+			return fmt.Sprintf("%s/%s-%s", file.UserID, uuid, file.FileName)
 		}
-		return fmt.Sprintf("%s-%s", file.UniqueID, file.FileName)
+		return fmt.Sprintf("%s-%s", uuid, file.FileName)
 	}
 
 	// fallback
-	return fmt.Sprintf("%s-%s", file.UniqueID, file.FileName)
+	return fmt.Sprintf("%s-%s", uuid, file.FileName)
 }
 
 // Delete implements domain.IFileUsecase.
@@ -53,8 +56,8 @@ func (f *fileUsecase) Delete(ctx context.Context, ID, userID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete file from database: %w", domain.ErrInternal)
 	}
-	key := generateKeyName(file)
-	err = f.s3s.Delete(ctx, file.BucketName, key)
+	file.UniqueID = generateKeyName(file)
+	err = f.s3s.Delete(ctx, file.BucketName, file.UniqueID)
 	if err != nil {
 		return fmt.Errorf("failed to delete file from provider: %w", domain.ErrInternal)
 	}
@@ -77,7 +80,7 @@ func (f *fileUsecase) Download(ctx context.Context, fileID string, userID string
 	}
 
 	// generate unique name
-	key := generateKeyName(file)
+	key := file.UniqueID
 	url, err := f.s3s.PresignedURL(ctx, file.BucketName, key)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate presigned url: %w", domain.ErrInternal)
@@ -122,9 +125,9 @@ func (f *fileUsecase) Upload(ctx context.Context, file io.Reader, metaData *doma
 	}
 
 	// generates a unique keyname for the object
-	key := generateKeyName(metaData)
+	metaData.UniqueID = generateKeyName(metaData)
 	metaData.CreatedAt = time.Now()
-	err := f.s3s.Upload(ctx, metaData.BucketName, key, file, metaData.ContentType, metaData.Size)
+	err := f.s3s.Upload(ctx, metaData.BucketName, metaData.UniqueID, file, metaData.ContentType, metaData.Size)
 	if err != nil {
 		return nil, err
 	}
@@ -150,10 +153,10 @@ func (f *fileUsecase) GetProfilePictureByUserID(ctx context.Context, userID stri
 	}
 
 	// Generate key for S3
-	key := generateKeyName(file)
+	file.UniqueID = generateKeyName(file)
 
 	// Generate presigned URL
-	url, err := f.s3s.PresignedURL(ctx, file.BucketName, key)
+	url, err := f.s3s.PresignedURL(ctx, file.BucketName, file.UniqueID)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate presigned url: %w", domain.ErrInternal)
 	}
