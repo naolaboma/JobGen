@@ -15,6 +15,7 @@ func SetupRouter(
 	authController *controllers.AuthController,
 	authMiddleware *infrastructure.AuthMiddleware,
 	fileController *controllers.FileController,
+	cvController *controllers.CVController,
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -76,6 +77,8 @@ func SetupRouter(
 			files.POST("/upload/document", fileController.UploadDocument)
 			files.DELETE("/:id", fileController.DeleteFile)
 		}
+
+		addCVRoutes(api, cvController, authMiddleware.RequireAuth())
 	}
 
 	// Health check
@@ -92,4 +95,14 @@ func SetupRouter(
 	})
 
 	return r
+}
+
+func addCVRoutes(router *gin.RouterGroup, cvController *controllers.CVController, authMiddleware gin.HandlerFunc) {
+	cvRoutes := router.Group("/cv")
+	cvRoutes.Use(authMiddleware)
+	{
+		cvRoutes.POST("/parse", cvController.StartParsingJobHandler)
+		cvRoutes.GET("/parse/:jobId/status", cvController.GetParsingJobStatusHandler)
+		cvRoutes.GET("/:id", cvController.GetParsingJobStatusHandler)
+	}
 }

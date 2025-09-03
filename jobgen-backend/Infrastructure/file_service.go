@@ -5,11 +5,31 @@ import (
 	"fmt"
 	"io"
 	domain "jobgen-backend/Domain"
+	"os"
 	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
+
+type FileStorageService interface {
+	GetFile(fileID string) (io.ReadCloser, error)
+}
+
+type localFileStorageService struct {
+	basePath string
+}
+
+func NewFileStorageService(basePath string) FileStorageService {
+	return &localFileStorageService{
+		basePath: basePath,
+	}
+}
+
+func (fs *localFileStorageService) GetFile(fileID string) (io.ReadCloser, error) {
+	filePath := fs.basePath + "/" + fileID
+	return os.Open(filePath)
+}
 
 type s3Service struct {
 	minIO   *minio.Client
@@ -37,7 +57,7 @@ func (s *s3Service) Delete(ctx context.Context, bucket string, key string) error
 
 // PresignedURL implements domain.IFileService.
 func (s *s3Service) PresignedURL(ctx context.Context, bucket string, key string) (string, error) {
-	url, err := s.minIO.PresignedGetObject(ctx, bucket, key, time.Duration(s.maxLife) * time.Second, nil)
+	url, err := s.minIO.PresignedGetObject(ctx, bucket, key, time.Duration(s.maxLife)*time.Second, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to check generate url: %w", domain.ErrInternal)
 	}
