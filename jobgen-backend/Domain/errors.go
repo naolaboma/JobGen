@@ -38,4 +38,10 @@ var (
 	ErrInvalidUsername   = errors.New("invalid username format")
 	ErrPasswordTooShort  = errors.New("password must be at least 8 characters")
 	ErrFullNameRequired  = errors.New("full name is required")
+	
+	// File related errors
+	ErrFileTooBig 		 = errors.New("file size exceeds the allowed limits")
+	ErrInvalidFileFormat = errors.New("file size exceeds the allowed limits")
+	ErrUnknownFileType   = errors.New("file size exceeds the allowed limits")
+	ErrFileNotFound      = errors.New("file size exceeds the allowed limits")
 )

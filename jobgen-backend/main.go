@@ -74,8 +74,28 @@ func main() {
 	userController := controllers.NewUserController(userUsecase)
 	authController := controllers.NewAuthController(authUsecase)
 
+	// --- MinIO Setup ---
+	minioURL := infrastructure.Env.FileStorageURL
+	minioAccessKey := infrastructure.Env.AccessKey
+	minioSecretKey := infrastructure.Env.SecretKey
+	maxFileSize := infrastructure.Env.MaxAllowedFileSize
+	maxUrlLife := infrastructure.Env.MaxFileUrlLife
+
+	minioService, err := infrastructure.NewFileService(minioURL, minioAccessKey, minioSecretKey, maxFileSize, maxUrlLife)
+	if err != nil {
+		log.Fatal("MinIO setup error:", err)
+	}
+
+	// --- Repository ---
+	fileRepo := repositories.NewFileRepository(db)
+	fileUsecase := usecases.NewFileUsecase(fileRepo, minioService)
+
+	// --- Controller ---
+	fileController := controllers.NewFileController(fileUsecase)
+	// ----------------------------
+
 	// Setup router
-	router := router.SetupRouter(userController, authController, authMiddleware)
+	router := router.SetupRouter(userController, authController, authMiddleware, fileController)
 
 	// Start server
 	port := infrastructure.Env.Port
@@ -86,7 +106,7 @@ func main() {
 	log.Printf("Starting JobGen API server on port %s", port)
 	log.Printf("Environment: %s", infrastructure.Env.Environment)
 	log.Printf("Swagger documentation available at: http://localhost:%s/swagger/index.html", port)
-	
+
 	if err := router.Run(":" + port); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}

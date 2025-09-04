@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -23,16 +24,22 @@ import (
 // Test Suite
 type APITestSuite struct {
 	suite.Suite
-	router           *gin.Engine
-	userUsecase      *MockUserUsecase
-	authUsecase      *MockAuthUsecase
-	jwtService       *MockJWTService
-	userController   *controllers.UserController
-	authController   *controllers.AuthController
-	authMiddleware   *infrastructure.AuthMiddleware
+	router         *gin.Engine
+	userUsecase    *MockUserUsecase
+	authUsecase    *MockAuthUsecase
+	fileUsecase    *MockFileUsecase
+	jwtService     *MockJWTService
+	userController *controllers.UserController
+	authController *controllers.AuthController
+	fileController *controllers.FileController
+	authMiddleware *infrastructure.AuthMiddleware
 }
 
 // Mock implementations
+type MockFileUsecase struct {
+	mock.Mock
+}
+
 type MockUserUsecase struct {
 	mock.Mock
 }
@@ -43,6 +50,34 @@ type MockAuthUsecase struct {
 
 type MockJWTService struct {
 	mock.Mock
+}
+
+func (m *MockFileUsecase) Upload(ctx context.Context, file io.Reader, metaData *domain.File) (*domain.File, error) {
+	args := m.Called(ctx, file, metaData)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.File), args.Error(1)
+}
+
+func (m *MockFileUsecase) Download(ctx context.Context, fileID string, userID string) (string, error) {
+	args := m.Called(ctx, fileID, userID)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockFileUsecase) Delete(ctx context.Context, ID string, userID string) error {
+	args := m.Called(ctx, ID, userID)
+	return args.Error(0)
+}
+
+func (m *MockFileUsecase) Exists(ctx context.Context, ID string) (bool, error) {
+	args := m.Called(ctx, ID)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockFileUsecase) GetProfilePictureByUserID(ctx context.Context, ID string) (string, error) {
+	args := m.Called(ctx, ID)
+	return args.String(0), args.Error(1)
 }
 
 // Mock UserUsecase methods
@@ -175,19 +210,21 @@ func (m *MockJWTService) ValidateRefreshToken(tokenString string) (*domain.Refre
 // Setup and teardown
 func (suite *APITestSuite) SetupTest() {
 	gin.SetMode(gin.TestMode)
-	
+
 	// Initialize mocks
 	suite.userUsecase = new(MockUserUsecase)
 	suite.authUsecase = new(MockAuthUsecase)
 	suite.jwtService = new(MockJWTService)
+	suite.fileUsecase = new(MockFileUsecase)
 
 	// Initialize controllers
 	suite.userController = controllers.NewUserController(suite.userUsecase)
 	suite.authController = controllers.NewAuthController(suite.authUsecase)
+	suite.fileController = controllers.NewFileController(suite.fileUsecase)
 	suite.authMiddleware = infrastructure.NewAuthMiddleware(suite.jwtService)
 
 	// Setup router
-	suite.router = router.SetupRouter(suite.userController, suite.authController, suite.authMiddleware)
+	suite.router = router.SetupRouter(suite.userController, suite.authController, suite.authMiddleware, suite.fileController)
 }
 
 func (suite *APITestSuite) TearDownTest() {
@@ -195,6 +232,7 @@ func (suite *APITestSuite) TearDownTest() {
 	suite.userUsecase.AssertExpectations(suite.T())
 	suite.authUsecase.AssertExpectations(suite.T())
 	suite.jwtService.AssertExpectations(suite.T())
+	suite.fileUsecase.AssertExpectations(suite.T())
 }
 
 // Helper functions
@@ -206,7 +244,7 @@ func (suite *APITestSuite) makeRequest(method, path string, body interface{}, he
 
 	req, _ := http.NewRequest(method, path, bytes.NewBuffer(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
