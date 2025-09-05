@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	domain "jobgen-backend/Domain"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -85,13 +86,25 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 }
 
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
-	var user domain.User
-	filter := bson.M{"email": email}
-	err := r.collection.FindOne(ctx, filter).Decode(&user)
-	if err == mongo.ErrNoDocuments {
-		return nil, domain.ErrUserNotFound
-	}
-	return &user, err
+    var user domain.User
+    email = strings.ToLower(strings.TrimSpace(email))
+
+    filter := bson.M{"email": email}
+    fmt.Println("Looking for user with filter:", filter, "in collection:", r.collection.Name())
+
+    res := r.collection.FindOne(ctx, filter)
+    if res.Err() != nil {
+        if res.Err() == mongo.ErrNoDocuments {
+            return nil, domain.ErrUserNotFound
+        }
+        return nil, fmt.Errorf("query failed: %w", res.Err())
+    }
+
+    if err := res.Decode(&user); err != nil {
+        return nil, fmt.Errorf("failed to decode user: %w", err)
+    }
+
+    return &user, nil
 }
 
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
@@ -121,24 +134,21 @@ func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*d
 
 func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
     user.UpdatedAt = time.Now()
-    objectID, err := primitive.ObjectIDFromHex(user.ID)
-    if err != nil {
-        return domain.ErrUserNotFound
-    }
-    filter := bson.M{"_id": objectID}
+    filter := bson.M{"_id": user.ID} // use string, not ObjectID
     update := bson.M{"$set": user}
-    
+
     result, err := r.collection.UpdateOne(ctx, filter, update)
     if err != nil {
         return err
     }
-    
+
     if result.MatchedCount == 0 {
         return domain.ErrUserNotFound
     }
-    
+
     return nil
 }
+
 
 func (r *UserRepository) UpdatePassword(ctx context.Context, userID, newPasswordHash string) error {
     objectID, err := primitive.ObjectIDFromHex(userID)
