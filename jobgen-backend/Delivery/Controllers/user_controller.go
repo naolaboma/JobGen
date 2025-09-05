@@ -21,15 +21,18 @@ func NewUserController(userUsecase domain.IUserUsecase) *UserController {
 
 // RegisterRequest represents the registration request body
 type RegisterRequest struct {
-	Email           string   `json:"email" binding:"required,email"`
-	Username        string   `json:"username" binding:"required,min=3,max=30"`
-	Password        string   `json:"password" binding:"required,min=8"`
-	FullName        string   `json:"full_name" binding:"required,min=1"`
-	PhoneNumber     string   `json:"phone_number,omitempty"`
-	Location        string   `json:"location,omitempty"`
-	Skills          []string `json:"skills,omitempty"`
-	ExperienceYears int      `json:"experience_years,omitempty"`
-	Bio             string   `json:"bio,omitempty"`
+	Email            string         `json:"email" binding:"required,email"`
+	Username         string         `json:"username" binding:"required,min=3,max=30"`
+	Password         string         `json:"password" binding:"required,min=8"`
+	FullName         string         `json:"full_name" binding:"required,min=1"`
+	PhoneNumber      string         `json:"phone_number,omitempty"`
+	Location         string         `json:"location,omitempty"`
+	Skills           []string       `json:"skills,omitempty"`
+	ExperienceYears  int            `json:"experience_years,omitempty"`
+	Bio              string         `json:"bio,omitempty"`
+	JobType          domain.JobType `json:"job_type,omitempty" binding:"omitempty,oneof=full-time part-time contract internship temporary remote hybrid freelance"`
+	PreferredCountry string         `json:"preferred_country,omitempty"`
+	CityRegion       string         `json:"city_region,omitempty"`
 }
 
 // LoginRequest represents the login request body
@@ -46,42 +49,44 @@ type VerifyEmailRequest struct {
 
 // UpdateProfileRequest represents the profile update request
 type UpdateProfileRequest struct {
-	FullName        *string   `json:"full_name,omitempty"`
-	PhoneNumber     *string   `json:"phone_number,omitempty"`
-	Location        *string   `json:"location,omitempty"`
-	Skills          *[]string `json:"skills,omitempty"`
-	ExperienceYears *int      `json:"experience_years,omitempty"`
-	Bio             *string   `json:"bio,omitempty"`
-	ProfilePicture  *string   `json:"profile_picture,omitempty"`
+	FullName         *string          `json:"full_name,omitempty"`
+	PhoneNumber      *string          `json:"phone_number,omitempty"`
+	Location         *string          `json:"location,omitempty"`
+	Skills           *[]string        `json:"skills,omitempty"`
+	ExperienceYears  *int             `json:"experience_years,omitempty"`
+	Bio              *string          `json:"bio,omitempty"`
+	ProfilePicture   *string          `json:"profile_picture,omitempty"`
+	JobType          *domain.JobType  `json:"job_type,omitempty" binding:"omitempty,oneof=full-time part-time contract internship temporary remote hybrid freelance"`
+	PreferredCountry *string          `json:"preferred_country,omitempty"`
+	CityRegion       *string          `json:"city_region,omitempty"`
 }
 
-// ChangePasswordRequest represents the password change request
+
 type ChangePasswordRequest struct {
 	OldPassword string `json:"old_password" binding:"required"`
 	NewPassword string `json:"new_password" binding:"required,min=8"`
 }
 
-// RequestPasswordResetRequest represents the password reset request
 type RequestPasswordResetRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }
 
-// ResetPasswordRequest represents the password reset request
 type ResetPasswordRequest struct {
-	Token       string `json:"token" binding:"required"`
+	Email       string `json:"email" binding:"required,email"`
+	OTP         string `json:"otp" binding:"required,len=6"`
 	NewPassword string `json:"new_password" binding:"required,min=8"`
 }
 
-// UpdateUserRoleRequest represents the admin role update request
 type UpdateUserRoleRequest struct {
 	Role domain.Role `json:"role" binding:"required,oneof=user admin"`
 }
 
-// ResendOTPRequest represents the request to resend OTP
-type ResendOTPRequest struct {
-	Email string `json:"email" binding:"required,email"`
-}
 
+type ResendOTPRequest struct {
+    Email   string `json:"email" binding:"required,email"`
+    Purpose string `json:"purpose" binding:"required,oneof=EMAIL_VERIFICATION PASSWORD_RESET"`
+}
+// todo it is better to move the auth related things inside auth controller
 // @Summary Register a new user
 // @Description Register a new user account with email verification
 // @Tags Authentication
@@ -99,22 +104,24 @@ func (c *UserController) Register(ctx *gin.Context) {
 		return
 	}
 
-	// Validate required fields explicitly
 	if req.FullName == "" {
 		ErrorResponse(ctx, http.StatusBadRequest, "VALIDATION_ERROR", "Full name is required", nil)
 		return
 	}
 
 	user := &domain.User{
-		Email:           req.Email,
-		Username:        req.Username,
-		Password:        req.Password,
-		FullName:        req.FullName,
-		PhoneNumber:     req.PhoneNumber,
-		Location:        req.Location,
-		Skills:          req.Skills,
-		ExperienceYears: req.ExperienceYears,
-		Bio:             req.Bio,
+		Email:            req.Email,
+		Username:         req.Username,
+		Password:         req.Password,
+		FullName:         req.FullName,
+		PhoneNumber:      req.PhoneNumber,
+		Location:         req.Location,
+		Skills:           req.Skills,
+		ExperienceYears:  req.ExperienceYears,
+		Bio:              req.Bio,
+		JobType:          req.JobType,
+		PreferredCountry: req.PreferredCountry,
+		CityRegion:       req.CityRegion,
 	}
 
 	if err := c.userUsecase.Register(ctx, user); err != nil {
@@ -249,6 +256,7 @@ func (c *UserController) GetProfile(ctx *gin.Context) {
 	})
 }
 
+
 // @Summary Update user profile
 // @Description Update current user's profile information
 // @Tags User Profile
@@ -274,13 +282,16 @@ func (c *UserController) UpdateProfile(ctx *gin.Context) {
 	}
 
 	profileUpdates := domain.UserUpdateInput{
-		FullName:        req.FullName,
-		PhoneNumber:     req.PhoneNumber,
-		Location:        req.Location,
-		Skills:          req.Skills,
-		ExperienceYears: req.ExperienceYears,
-		Bio:             req.Bio,
-		ProfilePicture:  req.ProfilePicture,
+		FullName:         req.FullName,
+		PhoneNumber:      req.PhoneNumber,
+		Location:         req.Location,
+		Skills:           req.Skills,
+		ExperienceYears:  req.ExperienceYears,
+		Bio:              req.Bio,
+		ProfilePicture:   req.ProfilePicture,
+		JobType:          req.JobType,
+		PreferredCountry: req.PreferredCountry,
+		CityRegion:       req.CityRegion,
 	}
 
 	updatedUser, err := c.userUsecase.UpdateProfile(ctx, userID, profileUpdates)
@@ -294,14 +305,14 @@ func (c *UserController) UpdateProfile(ctx *gin.Context) {
 	})
 }
 
-// @Summary Request password reset
-// @Description Request a password reset link to be sent to the user's email
+
+// @Summary Request password reset (OTP)
+// @Description Request a password reset OTP to be sent to the user's email
 // @Tags Authentication
 // @Accept json
 // @Produce json
 // @Param request body RequestPasswordResetRequest true "Email address"
-// @Success 200 {object} StandardResponse "Password reset requested"
-// @Failure 400 {object} StandardResponse "Bad request"
+// @Success 200 {object} StandardResponse
 // @Router /auth/forgot-password [post]
 func (c *UserController) RequestPasswordReset(ctx *gin.Context) {
 	var req RequestPasswordResetRequest
@@ -310,24 +321,24 @@ func (c *UserController) RequestPasswordReset(ctx *gin.Context) {
 		return
 	}
 
-	_, err := c.userUsecase.RequestPasswordReset(ctx, req.Email)
+	err := c.userUsecase.RequestPasswordResetOTP(ctx, req.Email)
 	if err != nil {
-		// For security, don't reveal if user exists or not
-		SuccessResponse(ctx, http.StatusOK, "If an account with that email exists, a password reset link has been sent", nil)
+		// For security: always return success
+		SuccessResponse(ctx, http.StatusOK, "If an account with that email exists, an OTP has been sent", nil)
 		return
 	}
 
-	SuccessResponse(ctx, http.StatusOK, "Password reset link has been sent to your email", nil)
+	SuccessResponse(ctx, http.StatusOK, "Password reset OTP sent to your email", nil)
 }
 
-// @Summary Reset password
-// @Description Reset the user's password using the token from the password reset email
+// @Summary Reset password with OTP
+// @Description Reset the user's password using OTP
 // @Tags Authentication
 // @Accept json
 // @Produce json
 // @Param request body ResetPasswordRequest true "Password reset details"
-// @Success 200 {object} StandardResponse "Password reset successful"
-// @Failure 400 {object} StandardResponse "Bad request"
+// @Success 200 {object} StandardResponse
+// @Failure 400 {object} StandardResponse
 // @Router /auth/reset-password [post]
 func (c *UserController) ResetPassword(ctx *gin.Context) {
 	var req ResetPasswordRequest
@@ -337,15 +348,15 @@ func (c *UserController) ResetPassword(ctx *gin.Context) {
 	}
 
 	input := domain.ResetPasswordInput{
-		Token:       req.Token,
+		Email:       req.Email,
+		OTP:         req.OTP,
 		NewPassword: req.NewPassword,
 	}
 
-	err := c.userUsecase.ResetPassword(ctx, input)
-	if err != nil {
+	if err := c.userUsecase.ResetPassword(ctx, input); err != nil {
 		switch err {
-		case domain.ErrInvalidToken, domain.ErrInvalidResetToken:
-			ErrorResponse(ctx, http.StatusBadRequest, "INVALID_TOKEN", "Invalid or expired reset token", nil)
+		case domain.ErrInvalidOTP:
+			ErrorResponse(ctx, http.StatusBadRequest, "INVALID_OTP", "Invalid or expired OTP", nil)
 		default:
 			InternalErrorResponse(ctx, "Failed to reset password")
 		}
@@ -354,7 +365,6 @@ func (c *UserController) ResetPassword(ctx *gin.Context) {
 
 	SuccessResponse(ctx, http.StatusOK, "Password reset successful. You can now login with your new password.", nil)
 }
-
 // @Summary Change password
 // @Description Change the user's password while logged in
 // @Tags Authentication
@@ -608,11 +618,11 @@ func (c *UserController) DeleteUser(ctx *gin.Context) {
 }
 
 // @Summary Resend OTP
-// @Description Resend the OTP verification code to the user's email
+// @Description Resend the OTP for email verification or password reset
 // @Tags Authentication
 // @Accept json
 // @Produce json
-// @Param request body ResendOTPRequest true "Email address"
+// @Param request body ResendOTPRequest true "Email and Purpose"
 // @Success 200 {object} StandardResponse "OTP resent successfully"
 // @Failure 400 {object} StandardResponse "Bad request"
 // @Failure 404 {object} StandardResponse "User not found"
@@ -623,8 +633,8 @@ func (c *UserController) ResendOTP(ctx *gin.Context) {
         ValidationErrorResponse(ctx, err)
         return
     }
-    
-    err := c.userUsecase.ResendOTP(ctx, req.Email)
+
+    err := c.userUsecase.ResendOTP(ctx, req.Email, domain.OTPPurpose(req.Purpose))
     if err != nil {
         if err == domain.ErrUserNotFound {
             NotFoundResponse(ctx, "User not found")
@@ -637,6 +647,7 @@ func (c *UserController) ResendOTP(ctx *gin.Context) {
         InternalErrorResponse(ctx, "Failed to resend OTP")
         return
     }
-    
-    SuccessResponse(ctx, http.StatusOK, "Verification code resent to your email", nil)
+
+    SuccessResponse(ctx, http.StatusOK, "OTP resent successfully", nil)
 }
+

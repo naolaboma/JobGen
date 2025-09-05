@@ -12,6 +12,19 @@ const (
 	RoleAdmin Role = "admin"
 )
 
+type JobType string
+
+const (
+	FullTime   JobType = "full-time"
+	PartTime   JobType = "part-time"
+	Contract   JobType = "contract"
+	Internship JobType = "internship"
+	Temporary  JobType = "temporary"
+	Remote     JobType = "remote"
+	Hybrid     JobType = "hybrid"
+	Freelance  JobType = "freelance"
+)
+
 type User struct {
 	ID              string    `json:"id" bson:"_id,omitempty"`
 	Email           string    `json:"email" bson:"email"`
@@ -24,6 +37,9 @@ type User struct {
 	ExperienceYears int       `json:"experience_years" bson:"experience_years"`
 	Bio             string    `json:"bio" bson:"bio"`
 	ProfilePicture  string    `json:"profile_picture" bson:"profile_picture"`
+	JobType         JobType   `json:"job_type" bson:"job_type"`
+	PreferredCountry string   `json:"preferred_country" bson:"preferred_country"`
+	CityRegion      string    `json:"city_region" bson:"city_region"`
 	Role            Role      `json:"role" bson:"role"`
 	IsVerified      bool      `json:"is_verified" bson:"is_verified"`
 	IsActive        bool      `json:"is_active" bson:"is_active"`
@@ -54,7 +70,7 @@ type IUserUsecase interface {
 	VerifyEmail(ctx context.Context, input VerifyEmailInput) error
 	UpdateProfile(ctx context.Context, userID string, updates UserUpdateInput) (*User, error)
 	ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error
-	RequestPasswordReset(ctx context.Context, email string) (string, error)
+	RequestPasswordResetOTP(ctx context.Context, email string) error // Changed
 	ResetPassword(ctx context.Context, input ResetPasswordInput) error
 	GetProfile(ctx context.Context, userID string) (*User, error)
 	DeleteAccount(ctx context.Context, userID string) error
@@ -63,9 +79,8 @@ type IUserUsecase interface {
 	UpdateUserRole(ctx context.Context, adminUserID, targetUserID string, role Role) error
 	ToggleUserStatus(ctx context.Context, adminUserID, targetUserID string) error
 	DeleteUser(ctx context.Context, adminUserID, targetUserID string) error
-	ResendOTP(ctx context.Context, email string) error
+	ResendOTP(ctx context.Context, email string, purpose OTPPurpose) error
 }
-
 // DTOs and filters
 type UserFilter struct {
 	Role      *Role  `json:"role,omitempty"`
@@ -85,6 +100,10 @@ type UserUpdateInput struct {
 	ExperienceYears *int      `json:"experience_years,omitempty"`
 	Bio             *string   `json:"bio,omitempty"`
 	ProfilePicture  *string   `json:"profile_picture,omitempty"`
+	JobType          *JobType `json:"job_type,omitempty" binding:"omitempty,oneof=full-time part-time contract internship temporary remote hybrid freelance"`
+	PreferredCountry *string   `json:"preferred_country,omitempty"`
+	CityRegion       *string    `json:"city_region,omitempty"`
+
 }
 
 type PaginatedUsersResponse struct {

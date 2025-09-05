@@ -25,7 +25,9 @@ type RequestPasswordResetInput struct {
 	Email string `json:"email"`
 }
 
+// ResetPasswordInput can remain the same or be adapted
 type ResetPasswordInput struct {
-	Token       string `json:"token"`
-	NewPassword string `json:"new_password"`
+	Email       string `json:"email" binding:"required,email"` // Added email
+	OTP         string `json:"otp" binding:"required,len=6"` // Changed from Token
+	NewPassword string `json:"new_password" binding:"required,min=8"`
 }

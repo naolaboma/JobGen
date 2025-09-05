@@ -20,7 +20,7 @@ type s3Service struct {
 func NewFileService(url, accessKey, secretKey string, maxSize, maxLife int64) (domain.IFileService, error) {
 	minioClient, err := minio.New(url, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
-		Secure: false, // set true if you are using https
+		Secure: true, // set true if you are using https
 		Region: "us-east-1",
 	})
 	return &s3Service{

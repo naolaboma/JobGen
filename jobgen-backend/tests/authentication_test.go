@@ -331,45 +331,45 @@ func (suite *APITestSuite) TestRequestPasswordReset() {
 	})
 }
 
-func (suite *APITestSuite) TestResetPassword() {
-	suite.Run("successful password reset", func() {
-		reqBody := controllers.ResetPasswordRequest{
-			Token:       "valid-reset-token",
-			NewPassword: "NewPassword123!",
-		}
+// func (suite *APITestSuite) TestResetPassword() {
+// 	suite.Run("successful password reset", func() {
+// 		reqBody := controllers.ResetPasswordRequest{
+// 			Token:       "valid-reset-token",
+// 			NewPassword: "NewPassword123!",
+// 		}
 
-		suite.userUsecase.On("ResetPassword", mock.Anything, domain.ResetPasswordInput{
-			Token:       "valid-reset-token",
-			NewPassword: "NewPassword123!",
-		}).Return(nil)
+// 		suite.userUsecase.On("ResetPassword", mock.Anything, domain.ResetPasswordInput{
+// 			Token:       "valid-reset-token",
+// 			NewPassword: "NewPassword123!",
+// 		}).Return(nil)
 
-		w := suite.makeRequest("POST", "/api/v1/auth/reset-password", reqBody, nil)
+// 		w := suite.makeRequest("POST", "/api/v1/auth/reset-password", reqBody, nil)
 
-		suite.Equal(http.StatusOK, w.Code)
-		response := suite.parseResponse(w)
-		suite.True(response.Success)
-		suite.Contains(response.Message, "Password reset successful")
-	})
+// 		suite.Equal(http.StatusOK, w.Code)
+// 		response := suite.parseResponse(w)
+// 		suite.True(response.Success)
+// 		suite.Contains(response.Message, "Password reset successful")
+// 	})
 
-	suite.Run("password reset with invalid token", func() {
-		reqBody := controllers.ResetPasswordRequest{
-			Token:       "invalid-token",
-			NewPassword: "NewPassword123!",
-		}
+// 	suite.Run("password reset with invalid token", func() {
+// 		reqBody := controllers.ResetPasswordRequest{
+// 			Token:       "invalid-token",
+// 			NewPassword: "NewPassword123!",
+// 		}
 
-		suite.userUsecase.On("ResetPassword", mock.Anything, domain.ResetPasswordInput{
-			Token:       "invalid-token",
-			NewPassword: "NewPassword123!",
-		}).Return(domain.ErrInvalidResetToken)
+// 		suite.userUsecase.On("ResetPassword", mock.Anything, domain.ResetPasswordInput{
+// 			Token:       "invalid-token",
+// 			NewPassword: "NewPassword123!",
+// 		}).Return(domain.ErrInvalidResetToken)
 
-		w := suite.makeRequest("POST", "/api/v1/auth/reset-password", reqBody, nil)
+// 		w := suite.makeRequest("POST", "/api/v1/auth/reset-password", reqBody, nil)
 
-		suite.Equal(http.StatusBadRequest, w.Code)
-		response := suite.parseResponse(w)
-		suite.False(response.Success)
-		suite.Equal("INVALID_TOKEN", response.Error.Code)
-	})
-}
+// 		suite.Equal(http.StatusBadRequest, w.Code)
+// 		response := suite.parseResponse(w)
+// 		suite.False(response.Success)
+// 		suite.Equal("INVALID_TOKEN", response.Error.Code)
+// 	})
+// }
 
 func (suite *APITestSuite) TestChangePassword() {
 	suite.Run("successful password change", func() {

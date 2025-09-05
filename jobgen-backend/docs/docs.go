@@ -347,7 +347,7 @@ const docTemplate = `{
         },
         "/auth/forgot-password": {
             "post": {
-                "description": "Request a password reset link to be sent to the user's email",
+                "description": "Request a password reset OTP to be sent to the user's email",
                 "consumes": [
                     "application/json"
                 ],
@@ -357,7 +357,7 @@ const docTemplate = `{
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Request password reset",
+                "summary": "Request password reset (OTP)",
                 "parameters": [
                     {
                         "description": "Email address",
@@ -371,13 +371,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Password reset requested",
-                        "schema": {
-                            "$ref": "#/definitions/controllers.StandardResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad request",
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/controllers.StandardResponse"
                         }
@@ -559,7 +553,7 @@ const docTemplate = `{
         },
         "/auth/resend-otp": {
             "post": {
-                "description": "Resend the OTP verification code to the user's email",
+                "description": "Resend the OTP for email verification or password reset",
                 "consumes": [
                     "application/json"
                 ],
@@ -572,7 +566,7 @@ const docTemplate = `{
                 "summary": "Resend OTP",
                 "parameters": [
                     {
-                        "description": "Email address",
+                        "description": "Email and Purpose",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -605,7 +599,7 @@ const docTemplate = `{
         },
         "/auth/reset-password": {
             "post": {
-                "description": "Reset the user's password using the token from the password reset email",
+                "description": "Reset the user's password using OTP",
                 "consumes": [
                     "application/json"
                 ],
@@ -615,7 +609,7 @@ const docTemplate = `{
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Reset password",
+                "summary": "Reset password with OTP",
                 "parameters": [
                     {
                         "description": "Password reset details",
@@ -629,13 +623,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Password reset successful",
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/controllers.StandardResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/controllers.StandardResponse"
                         }
@@ -729,158 +723,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/files/:id": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Generates a presigned URL to download a file owned by the authenticated user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Files"
-                ],
-                "summary": "Download a file",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "File ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Presigned URL for the file",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/controllers.StandardResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "File not found",
-                        "schema": {
-                            "$ref": "#/definitions/controllers.StandardResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/controllers.StandardResponse"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Deletes a file owned by the authenticated user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Files"
-                ],
-                "summary": "Delete a file",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "File ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "File deleted successfully",
-                        "schema": {
-                            "$ref": "#/definitions/controllers.StandardResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/controllers.StandardResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "File not found",
-                        "schema": {
-                            "$ref": "#/definitions/controllers.StandardResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/controllers.StandardResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/files/profile-picture/:id": {
-            "get": {
-                "description": "Fetch the profile picture presigned URL for a user if it exists",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Files"
-                ],
-                "summary": "Get profile picture",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Presigned URL returned successfully",
-                        "schema": {
-                            "$ref": "#/definitions/controllers.StandardResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Profile picture not found",
-                        "schema": {
-                            "$ref": "#/definitions/controllers.StandardResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/controllers.StandardResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/files/profile-picture/me": {
             "get": {
                 "security": [
@@ -908,6 +750,50 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized – user ID not found in context",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Profile picture not found",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/profile-picture/{id}": {
+            "get": {
+                "description": "Fetch the profile picture presigned URL for a user if it exists",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Get profile picture",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Presigned URL returned successfully",
                         "schema": {
                             "$ref": "#/definitions/controllers.StandardResponse"
                         }
@@ -1024,6 +910,114 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Generates a presigned URL to download a file owned by the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Download a file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Presigned URL for the file",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "File not found",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes a file owned by the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Delete a file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "File deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "File not found",
                         "schema": {
                             "$ref": "#/definitions/controllers.StandardResponse"
                         }
@@ -1228,6 +1222,9 @@ const docTemplate = `{
                 "bio": {
                     "type": "string"
                 },
+                "city_region": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -1238,6 +1235,23 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 1
                 },
+                "job_type": {
+                    "enum": [
+                        "full-time",
+                        "part-time",
+                        "contract",
+                        "internship",
+                        "temporary",
+                        "remote",
+                        "hybrid",
+                        "freelance"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.JobType"
+                        }
+                    ]
+                },
                 "location": {
                     "type": "string"
                 },
@@ -1246,6 +1260,9 @@ const docTemplate = `{
                     "minLength": 8
                 },
                 "phone_number": {
+                    "type": "string"
+                },
+                "preferred_country": {
                     "type": "string"
                 },
                 "skills": {
@@ -1275,26 +1292,38 @@ const docTemplate = `{
         "controllers.ResendOTPRequest": {
             "type": "object",
             "required": [
-                "email"
+                "email",
+                "purpose"
             ],
             "properties": {
                 "email": {
                     "type": "string"
+                },
+                "purpose": {
+                    "type": "string",
+                    "enum": [
+                        "EMAIL_VERIFICATION",
+                        "PASSWORD_RESET"
+                    ]
                 }
             }
         },
         "controllers.ResetPasswordRequest": {
             "type": "object",
             "required": [
+                "email",
                 "new_password",
-                "token"
+                "otp"
             ],
             "properties": {
+                "email": {
+                    "type": "string"
+                },
                 "new_password": {
                     "type": "string",
                     "minLength": 8
                 },
-                "token": {
+                "otp": {
                     "type": "string"
                 }
             }
@@ -1320,16 +1349,39 @@ const docTemplate = `{
                 "bio": {
                     "type": "string"
                 },
+                "city_region": {
+                    "type": "string"
+                },
                 "experience_years": {
                     "type": "integer"
                 },
                 "full_name": {
                     "type": "string"
                 },
+                "job_type": {
+                    "enum": [
+                        "full-time",
+                        "part-time",
+                        "contract",
+                        "internship",
+                        "temporary",
+                        "remote",
+                        "hybrid",
+                        "freelance"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.JobType"
+                        }
+                    ]
+                },
                 "location": {
                     "type": "string"
                 },
                 "phone_number": {
+                    "type": "string"
+                },
+                "preferred_country": {
                     "type": "string"
                 },
                 "profile_picture": {
@@ -1405,6 +1457,29 @@ const docTemplate = `{
                     "minLength": 3
                 }
             }
+        },
+        "domain.JobType": {
+            "type": "string",
+            "enum": [
+                "full-time",
+                "part-time",
+                "contract",
+                "internship",
+                "temporary",
+                "remote",
+                "hybrid",
+                "freelance"
+            ],
+            "x-enum-varnames": [
+                "FullTime",
+                "PartTime",
+                "Contract",
+                "Internship",
+                "Temporary",
+                "Remote",
+                "Hybrid",
+                "Freelance"
+            ]
         },
         "domain.Role": {
             "type": "string",

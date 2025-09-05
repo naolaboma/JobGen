@@ -40,6 +40,8 @@ definitions:
     properties:
       bio:
         type: string
+      city_region:
+        type: string
       email:
         type: string
       experience_years:
@@ -47,12 +49,26 @@ definitions:
       full_name:
         minLength: 1
         type: string
+      job_type:
+        allOf:
+        - $ref: '#/definitions/domain.JobType'
+        enum:
+        - full-time
+        - part-time
+        - contract
+        - internship
+        - temporary
+        - remote
+        - hybrid
+        - freelance
       location:
         type: string
       password:
         minLength: 8
         type: string
       phone_number:
+        type: string
+      preferred_country:
         type: string
       skills:
         items:
@@ -79,19 +95,28 @@ definitions:
     properties:
       email:
         type: string
+      purpose:
+        enum:
+        - EMAIL_VERIFICATION
+        - PASSWORD_RESET
+        type: string
     required:
     - email
+    - purpose
     type: object
   controllers.ResetPasswordRequest:
     properties:
+      email:
+        type: string
       new_password:
         minLength: 8
         type: string
-      token:
+      otp:
         type: string
     required:
+    - email
     - new_password
-    - token
+    - otp
     type: object
   controllers.StandardResponse:
     properties:
@@ -107,13 +132,29 @@ definitions:
     properties:
       bio:
         type: string
+      city_region:
+        type: string
       experience_years:
         type: integer
       full_name:
         type: string
+      job_type:
+        allOf:
+        - $ref: '#/definitions/domain.JobType'
+        enum:
+        - full-time
+        - part-time
+        - contract
+        - internship
+        - temporary
+        - remote
+        - hybrid
+        - freelance
       location:
         type: string
       phone_number:
+        type: string
+      preferred_country:
         type: string
       profile_picture:
         type: string
@@ -165,6 +206,26 @@ definitions:
     - name
     - subject
     type: object
+  domain.JobType:
+    enum:
+    - full-time
+    - part-time
+    - contract
+    - internship
+    - temporary
+    - remote
+    - hybrid
+    - freelance
+    type: string
+    x-enum-varnames:
+    - FullTime
+    - PartTime
+    - Contract
+    - Internship
+    - Temporary
+    - Remote
+    - Hybrid
+    - Freelance
   domain.Role:
     enum:
     - user
@@ -398,7 +459,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Request a password reset link to be sent to the user's email
+      description: Request a password reset OTP to be sent to the user's email
       parameters:
       - description: Email address
         in: body
@@ -410,14 +471,10 @@ paths:
       - application/json
       responses:
         "200":
-          description: Password reset requested
+          description: OK
           schema:
             $ref: '#/definitions/controllers.StandardResponse'
-        "400":
-          description: Bad request
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-      summary: Request password reset
+      summary: Request password reset (OTP)
       tags:
       - Authentication
   /auth/login:
@@ -535,9 +592,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Resend the OTP verification code to the user's email
+      description: Resend the OTP for email verification or password reset
       parameters:
-      - description: Email address
+      - description: Email and Purpose
         in: body
         name: request
         required: true
@@ -565,8 +622,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Reset the user's password using the token from the password reset
-        email
+      description: Reset the user's password using OTP
       parameters:
       - description: Password reset details
         in: body
@@ -578,14 +634,14 @@ paths:
       - application/json
       responses:
         "200":
-          description: Password reset successful
+          description: OK
           schema:
             $ref: '#/definitions/controllers.StandardResponse'
         "400":
-          description: Bad request
+          description: Bad Request
           schema:
             $ref: '#/definitions/controllers.StandardResponse'
-      summary: Reset password
+      summary: Reset password with OTP
       tags:
       - Authentication
   /auth/verify-email:
@@ -644,7 +700,7 @@ paths:
       summary: Submit a contact form
       tags:
       - Public
-  /files/:id:
+  /files/{id}:
     delete:
       consumes:
       - application/json
@@ -696,7 +752,7 @@ paths:
         "200":
           description: Presigned URL for the file
           schema:
-            type: string
+            $ref: '#/definitions/controllers.StandardResponse'
         "401":
           description: Unauthorized
           schema:
@@ -714,7 +770,7 @@ paths:
       summary: Download a file
       tags:
       - Files
-  /files/profile-picture/:id:
+  /files/profile-picture/{id}:
     get:
       consumes:
       - application/json

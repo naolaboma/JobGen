@@ -224,7 +224,7 @@ func (suite *APITestSuite) SetupTest() {
 	suite.authMiddleware = infrastructure.NewAuthMiddleware(suite.jwtService)
 
 	// Setup router
-	suite.router = router.SetupRouter(suite.userController, suite.authController, suite.authMiddleware, suite.fileController)
+suite.router = router.SetupRouter(suite.userController, suite.authController, suite.authMiddleware, nil, nil)
 }
 
 func (suite *APITestSuite) TearDownTest() {

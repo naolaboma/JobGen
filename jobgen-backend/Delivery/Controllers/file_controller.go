@@ -29,7 +29,7 @@ func NewFileController(fileUsecase domain.IFileUsecase) *FileController {
 // @Failure 404 {object} StandardResponse "File not found"
 // @Failure 500 {object} StandardResponse "Internal server error"
 // @Security BearerAuth
-// @Router /files/:id [delete]
+// @Router /files/{id} [delete]
 func (fc *FileController) DeleteFile(c *gin.Context) {
 	dbID := c.Param("id")
 	userID := c.GetString("user_id")
@@ -128,7 +128,6 @@ func (fc *FileController) uploadFile(c *gin.Context, bucket string) {
 
 	SuccessResponse(c, http.StatusOK, "file uploaded successfully", uploadedFile)
 }
-
 // DownloadFile generates a presigned URL for downloading a file
 // @Summary Download a file
 // @Description Generates a presigned URL to download a file owned by the authenticated user
@@ -136,12 +135,12 @@ func (fc *FileController) uploadFile(c *gin.Context, bucket string) {
 // @Accept json
 // @Produce json
 // @Param id path string true "File ID"
-// @Success 200 {string} string "Presigned URL for the file"
+// @Success 200 {object} StandardResponse "Presigned URL for the file"
 // @Failure 401 {object} StandardResponse "Unauthorized"
 // @Failure 404 {object} StandardResponse "File not found"
 // @Failure 500 {object} StandardResponse "Internal server error"
 // @Security BearerAuth
-// @Router /files/:id [get]
+// @Router /files/{id} [get]
 func (fc *FileController) DownloadFile(c *gin.Context) {
 	userID := c.GetString("user_id")
 	if userID == "" {
@@ -208,7 +207,7 @@ func (fc *FileController) GetMyProfilePicture(c *gin.Context) {
 // @Success 200 {object} StandardResponse "Presigned URL returned successfully"
 // @Failure 404 {object} StandardResponse "Profile picture not found"
 // @Failure 500 {object} StandardResponse "Internal server error"
-// @Router /files/profile-picture/:id [get]
+// @Router /files/profile-picture/{id} [get]
 func (fc *FileController) GetProfilePicture(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
