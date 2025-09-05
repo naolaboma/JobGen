@@ -50,6 +50,7 @@ func main() {
 	refreshTokenRepo := repositories.NewRefreshTokenRepository(db)
 	emailVerificationRepo := repositories.NewEmailVerificationRepository(db)
 	passwordResetRepo := repositories.NewPasswordResetRepository(db)
+	contactRepo := repositories.NewContactRepository(db)
 
 	// Initialize use cases
 	contextTimeout := 30 * time.Second
@@ -69,12 +70,18 @@ func main() {
 		refreshTokenRepo,
 		contextTimeout,
 	)
+	contactUsecase := usecases.NewContactUsecase(
+		contactRepo,
+		emailService,
+		contextTimeout,
+	)
 
 	// Initialize controllers
 	userController := controllers.NewUserController(userUsecase)
 	authController := controllers.NewAuthController(authUsecase)
+	contactController := controllers.NewContactController(contactUsecase)
 
-	// --- MinIO Setup ---
+	// MinIO Setup
 	minioURL := infrastructure.Env.FileStorageURL
 	minioAccessKey := infrastructure.Env.AccessKey
 	minioSecretKey := infrastructure.Env.SecretKey
@@ -86,16 +93,19 @@ func main() {
 		log.Fatal("MinIO setup error:", err)
 	}
 
-	// --- Repository ---
+	// File Repository and Usecase
 	fileRepo := repositories.NewFileRepository(db)
 	fileUsecase := usecases.NewFileUsecase(fileRepo, minioService)
-
-	// --- Controller ---
 	fileController := controllers.NewFileController(fileUsecase)
-	// ----------------------------
 
 	// Setup router
-	router := router.SetupRouter(userController, authController, authMiddleware, fileController)
+	router := router.SetupRouter(
+		userController,
+		authController,
+		authMiddleware,
+		fileController,
+		contactController,
+	)
 
 	// Start server
 	port := infrastructure.Env.Port

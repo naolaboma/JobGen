@@ -16,6 +16,7 @@ type EmailService struct {
 	username string
 	password string
 	dialer   *gomail.Dialer
+	adminEmail string // New field for admin email
 }
 
 func NewEmailService() domain.IEmailService {
@@ -30,6 +31,7 @@ func NewEmailService() domain.IEmailService {
 		username: Env.EmailUsername,
 		password: Env.EmailPassword,
 		dialer:   dialer,
+		adminEmail: Env.AdminEmail, // Initialize admin email
 	}
 }
 
@@ -207,6 +209,126 @@ func (e *EmailService) SendRoleChangeNotification(ctx context.Context, user *dom
 </html>`, user.FullName, string(newRole))
 
 	return e.sendEmail(user.Email, subject, body)
+}
+func (e *EmailService) SendContactFormToAdmin(ctx context.Context, contact *domain.Contact) error {
+	if e.adminEmail == "" {
+		return fmt.Errorf("admin email is not configured")
+	}
+
+	subject := fmt.Sprintf("JobGen Contact Form: %s (From: %s)", contact.Subject, contact.Name)
+
+	body := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>New Contact Form Submission</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f8;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 650px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-top: 6px solid #667eea;
+        }
+        .header {
+            background-color: #667eea;
+            color: #ffffff;
+            text-align: center;
+            padding: 25px 20px;
+        }
+        .header h2 {
+            margin: 0;
+        }
+        .content {
+            padding: 25px 30px;
+        }
+        .field {
+            margin-bottom: 15px;
+        }
+        .field strong {
+            display: inline-block;
+            width: 90px;
+            color: #555;
+        }
+        .message-box {
+            background: #f1f5fb;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            padding: 18px 22px;
+            border-radius: 8px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #1f2937;
+        }
+        .button {
+            display: inline-block;
+            background-color: #667eea;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            margin-top: 20px;
+            transition: background 0.3s ease;
+        }
+        .button:hover {
+            background-color: #5562c1;
+        }
+        .footer {
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #eee;
+        }
+        @media screen and (max-width: 680px) {
+            .container { margin: 20px; }
+            .content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>New Contact Form Submission</h2>
+        </div>
+        <div class="content">
+            <div class="field"><strong>Name:</strong> %s</div>
+            <div class="field"><strong>Email:</strong> %s</div>
+            <div class="field"><strong>Subject:</strong> %s</div>
+            <div class="message-box">
+                %s
+            </div>
+            <p style="margin-top: 20px; font-size: 14px;">Received on: %s</p>
+            <a href="mailto:%s" class="button">Reply to User</a>
+        </div>
+        <div class="footer">
+            <p>This is an automated notification from JobGen contact form.</p>
+        </div>
+    </div>
+</body>
+</html>`,
+		contact.Name,
+		contact.Email,
+		contact.Subject,
+		contact.Message,
+		contact.CreatedAt.Format("2006-01-02 15:04:05 MST"),
+		contact.Email,
+	)
+
+	return e.sendEmail(e.adminEmail, subject, body)
 }
 
 func (e *EmailService) sendEmail(to, subject, body string) error {

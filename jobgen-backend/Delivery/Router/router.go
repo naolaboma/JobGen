@@ -15,6 +15,7 @@ func SetupRouter(
 	authController *controllers.AuthController,
 	authMiddleware *infrastructure.AuthMiddleware,
 	fileController *controllers.FileController,
+	contactController *controllers.ContactController, // New: Contact Controller
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -36,6 +37,9 @@ func SetupRouter(
 
 	api := r.Group("/api/v1")
 	{
+		// Public routes
+		api.POST("/contact", contactController.SubmitContactForm) // New: Contact Form Submission
+
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", userController.Register)
