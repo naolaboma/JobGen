@@ -29,7 +29,7 @@ func NewFileController(fileUsecase domain.IFileUsecase) *FileController {
 // @Failure 404 {object} StandardResponse "File not found"
 // @Failure 500 {object} StandardResponse "Internal server error"
 // @Security BearerAuth
-// @Router /api/v1/file/{id} [delete]
+// @Router /files/:id [delete]
 func (fc *FileController) DeleteFile(c *gin.Context) {
 	dbID := c.Param("id")
 	userID := c.GetString("user_id")
@@ -39,7 +39,6 @@ func (fc *FileController) DeleteFile(c *gin.Context) {
 	}
 	err := fc.fileUsecase.Delete(c.Request.Context(), dbID, userID)
 	if err != nil {
-		// handle domain errors with switch
 		switch err {
 		case domain.ErrFileNotFound:
 			NotFoundResponse(c, "file not found")
@@ -66,9 +65,8 @@ func (fc *FileController) DeleteFile(c *gin.Context) {
 // @Failure 401 {object} StandardResponse "Unauthorized"
 // @Failure 500 {object} StandardResponse "Internal server error"
 // @Security BearerAuth
-// @Router /api/v1/file/upload/profile [put]
+// @Router /files/upload/profile [post]
 func (fc *FileController) UploadProfile(c *gin.Context) {
-	// calls uploadFile with bucket / folder name specified
 	fc.uploadFile(c, "profile-pictures")
 }
 
@@ -84,9 +82,8 @@ func (fc *FileController) UploadProfile(c *gin.Context) {
 // @Failure 401 {object} StandardResponse "Unauthorized"
 // @Failure 500 {object} StandardResponse "Internal server error"
 // @Security BearerAuth
-// @Router /api/v1/file/upload/document [put]
+// @Router /files/upload/document [post]
 func (fc *FileController) UploadDocument(c *gin.Context) {
-	// calls uploadFile with bucket / folder name specified
 	fc.uploadFile(c, "documents")
 }
 
@@ -98,7 +95,6 @@ func (fc *FileController) uploadFile(c *gin.Context, bucket string) {
 		return
 	}
 
-	// Read file from form-data
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		ValidationErrorResponse(c, err)
@@ -112,24 +108,17 @@ func (fc *FileController) uploadFile(c *gin.Context, bucket string) {
 	}
 	defer file.Close()
 
-	// Generate UUID for file key
 	data := domain.File{
-		UserID:      userID,
-		BucketName:  bucket,
-		FileName:    fileHeader.Filename,
-		Size:        fileHeader.Size,
+		UserID:     userID,
+		BucketName: bucket,
+		FileName:   fileHeader.Filename,
+		Size:       fileHeader.Size,
 	}
 
-	// Call usecase to upload file and store metadata
 	uploadedFile, err := fc.fileUsecase.Upload(c.Request.Context(), file, &data)
 	if err != nil {
-		// handle domain errors with switch
 		switch err {
-		case domain.ErrInvalidFileFormat:
-			ValidationErrorResponse(c, err)
-		case domain.ErrFileTooBig:
-			ValidationErrorResponse(c, err)
-		case domain.ErrUnknownFileType:
+		case domain.ErrInvalidFileFormat, domain.ErrFileTooBig, domain.ErrUnknownFileType:
 			ValidationErrorResponse(c, err)
 		default:
 			InternalErrorResponse(c, "failed to upload file")
@@ -137,7 +126,6 @@ func (fc *FileController) uploadFile(c *gin.Context, bucket string) {
 		return
 	}
 
-	// Return the uploaded file metadata as JSON
 	SuccessResponse(c, http.StatusOK, "file uploaded successfully", uploadedFile)
 }
 
@@ -153,7 +141,7 @@ func (fc *FileController) uploadFile(c *gin.Context, bucket string) {
 // @Failure 404 {object} StandardResponse "File not found"
 // @Failure 500 {object} StandardResponse "Internal server error"
 // @Security BearerAuth
-// @Router /api/v1/file/download/{id} [get]
+// @Router /files/:id [get]
 func (fc *FileController) DownloadFile(c *gin.Context) {
 	userID := c.GetString("user_id")
 	if userID == "" {
@@ -163,7 +151,6 @@ func (fc *FileController) DownloadFile(c *gin.Context) {
 	dbID := c.Param("id")
 	url, err := fc.fileUsecase.Download(c.Request.Context(), dbID, userID)
 	if err != nil {
-		// handle domain errors with switch
 		switch err {
 		case domain.ErrFileNotFound:
 			NotFoundResponse(c, "file not found")
@@ -175,7 +162,6 @@ func (fc *FileController) DownloadFile(c *gin.Context) {
 		return
 	}
 
-	// Return presigned URL as plain text
 	SuccessResponse(c, http.StatusOK, url, nil)
 }
 
@@ -190,7 +176,7 @@ func (fc *FileController) DownloadFile(c *gin.Context) {
 // @Failure 401 {object} StandardResponse "Unauthorized – user ID not found in context"
 // @Failure 404 {object} StandardResponse "Profile picture not found"
 // @Failure 500 {object} StandardResponse "Internal server error"
-// @Router /api/v1/file/profile-picture/me [get]
+// @Router /files/profile-picture/me [get]
 func (fc *FileController) GetMyProfilePicture(c *gin.Context) {
 	userID := c.GetString("user_id")
 	if userID == "" {
@@ -209,7 +195,6 @@ func (fc *FileController) GetMyProfilePicture(c *gin.Context) {
 		return
 	}
 
-	// Return the presigned URL
 	SuccessResponse(c, http.StatusOK, url, nil)
 }
 
@@ -223,7 +208,7 @@ func (fc *FileController) GetMyProfilePicture(c *gin.Context) {
 // @Success 200 {object} StandardResponse "Presigned URL returned successfully"
 // @Failure 404 {object} StandardResponse "Profile picture not found"
 // @Failure 500 {object} StandardResponse "Internal server error"
-// @Router /api/v1/file/profile-picture/{id} [get]
+// @Router /files/profile-picture/:id [get]
 func (fc *FileController) GetProfilePicture(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
@@ -231,7 +216,6 @@ func (fc *FileController) GetProfilePicture(c *gin.Context) {
 		return
 	}
 
-	// Fetch the profile picture presigned URL
 	url, err := fc.fileUsecase.GetProfilePictureByUserID(c.Request.Context(), userID)
 	if err != nil {
 		switch err {
@@ -243,6 +227,5 @@ func (fc *FileController) GetProfilePicture(c *gin.Context) {
 		return
 	}
 
-	// Return the presigned URL
 	SuccessResponse(c, http.StatusOK, url, nil)
 }

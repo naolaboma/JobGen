@@ -143,6 +143,28 @@ definitions:
     - email
     - otp
     type: object
+  domain.ContactFormRequest:
+    properties:
+      email:
+        type: string
+      message:
+        maxLength: 2000
+        minLength: 10
+        type: string
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+      subject:
+        maxLength: 200
+        minLength: 3
+        type: string
+    required:
+    - email
+    - message
+    - name
+    - subject
+    type: object
   domain.Role:
     enum:
     - user
@@ -340,206 +362,6 @@ paths:
       summary: Toggle user status
       tags:
       - Admin
-  /api/v1/file/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: Deletes a file owned by the authenticated user
-      parameters:
-      - description: File ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: File deleted successfully
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "404":
-          description: File not found
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-      security:
-      - BearerAuth: []
-      summary: Delete a file
-      tags:
-      - Files
-  /api/v1/file/download/{id}:
-    get:
-      consumes:
-      - application/json
-      description: Generates a presigned URL to download a file owned by the authenticated
-        user
-      parameters:
-      - description: File ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Presigned URL for the file
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "404":
-          description: File not found
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-      security:
-      - BearerAuth: []
-      summary: Download a file
-      tags:
-      - Files
-  /api/v1/file/profile-picture/{id}:
-    get:
-      consumes:
-      - application/json
-      description: Fetch the profile picture presigned URL for a user if it exists
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Presigned URL returned successfully
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "404":
-          description: Profile picture not found
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-      summary: Get profile picture
-      tags:
-      - Files
-  /api/v1/file/profile-picture/me:
-    get:
-      consumes:
-      - application/json
-      description: Fetch the current authenticated user's profile picture presigned
-        URL
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Profile picture URL fetched successfully
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "401":
-          description: Unauthorized – user ID not found in context
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "404":
-          description: Profile picture not found
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-      security:
-      - BearerAuth: []
-      summary: Get my profile picture
-      tags:
-      - Files
-  /api/v1/file/upload/document:
-    put:
-      consumes:
-      - multipart/form-data
-      description: Uploads a document for the authenticated user
-      parameters:
-      - description: Document file
-        in: formData
-        name: file
-        required: true
-        type: file
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: File uploaded successfully
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "400":
-          description: Validation error
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-      security:
-      - BearerAuth: []
-      summary: Upload a document
-      tags:
-      - Files
-  /api/v1/file/upload/profile:
-    put:
-      consumes:
-      - multipart/form-data
-      description: Uploads a profile picture for the authenticated user
-      parameters:
-      - description: Profile picture file
-        in: formData
-        name: file
-        required: true
-        type: file
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: File uploaded successfully
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "400":
-          description: Validation error
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/controllers.StandardResponse'
-      security:
-      - BearerAuth: []
-      summary: Upload profile picture
-      tags:
-      - Files
   /auth/change-password:
     post:
       consumes:
@@ -792,6 +614,235 @@ paths:
       summary: Verify email address
       tags:
       - Authentication
+  /contact:
+    post:
+      consumes:
+      - application/json
+      description: Allows users to submit general inquiries or feedback
+      parameters:
+      - description: Contact form details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ContactFormRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Contact form submitted successfully
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Bad request (validation error)
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      summary: Submit a contact form
+      tags:
+      - Public
+  /files/:id:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a file owned by the authenticated user
+      parameters:
+      - description: File ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: File deleted successfully
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "404":
+          description: File not found
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a file
+      tags:
+      - Files
+    get:
+      consumes:
+      - application/json
+      description: Generates a presigned URL to download a file owned by the authenticated
+        user
+      parameters:
+      - description: File ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Presigned URL for the file
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "404":
+          description: File not found
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Download a file
+      tags:
+      - Files
+  /files/profile-picture/:id:
+    get:
+      consumes:
+      - application/json
+      description: Fetch the profile picture presigned URL for a user if it exists
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Presigned URL returned successfully
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "404":
+          description: Profile picture not found
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      summary: Get profile picture
+      tags:
+      - Files
+  /files/profile-picture/me:
+    get:
+      consumes:
+      - application/json
+      description: Fetch the current authenticated user's profile picture presigned
+        URL
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile picture URL fetched successfully
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "401":
+          description: Unauthorized – user ID not found in context
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "404":
+          description: Profile picture not found
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Get my profile picture
+      tags:
+      - Files
+  /files/upload/document:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a document for the authenticated user
+      parameters:
+      - description: Document file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: File uploaded successfully
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload a document
+      tags:
+      - Files
+  /files/upload/profile:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a profile picture for the authenticated user
+      parameters:
+      - description: Profile picture file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: File uploaded successfully
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload profile picture
+      tags:
+      - Files
   /users/account:
     delete:
       consumes:
