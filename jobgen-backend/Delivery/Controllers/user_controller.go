@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	domain "jobgen-backend/Domain"
 	"net/http"
 	"strconv"
@@ -208,6 +209,7 @@ func (c *UserController) VerifyEmail(ctx *gin.Context) {
 			ErrorResponse(ctx, http.StatusBadRequest, "INVALID_OTP", "Invalid or expired OTP", nil)
 			return
 		}
+		fmt.Println("error in verify Email", err)
 		InternalErrorResponse(ctx, "Verification failed")
 		return
 	}

@@ -228,7 +228,9 @@ func (u *userUsecase) VerifyEmail(ctx context.Context, input domain.VerifyEmailI
 
 	// Get user by email
 	user, err := u.userRepo.GetByEmail(ctx, input.Email)
+	fmt.Println("Get user by Email", user)
 	if err != nil {
+		fmt.Println("Get by Email", err)
 		return domain.ErrUserNotFound
 	}
 
