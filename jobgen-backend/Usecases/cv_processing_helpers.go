@@ -1,7 +1,7 @@
 package usecases
 
 import (
-	"jobgen-backend/Domain"
+	domain "jobgen-backend/Domain"
 	"regexp"
 	"strings"
 )
@@ -13,10 +13,11 @@ var severityWeights = map[string]int{
 	"missing_keywords":  15,
 }
 
-func CalculateScore(suggestions []Domain.Suggestion) int {
+// CalculateScore computes the CV score based on suggestions.
+func CalculateScore(suggestions []domain.Suggestion) int {
 	score := 100
 	for _, suggestion := range suggestions {
-		if deduction, ok := severityWeights[suggestion.Type]; ok {
+		if deduction, exists := severityWeights[suggestion.Type]; exists {
 			score -= deduction
 		}
 	}
@@ -28,15 +29,14 @@ func CalculateScore(suggestions []Domain.Suggestion) int {
 
 // --- Parsing Pipeline Logic ---
 var (
-	expHeaderRegex    = regexp.MustCompile(`(?i)\b(experience|work history|employment)\b`)
-	eduHeaderRegex    = regexp.MustCompile(`(?i)\b(education|academic background)\b`)
-	skillsHeaderRegex = regexp.MustCompile(`(?i)\b(skills|technical proficiencies)\b`)
+	experienceHeaderRegex = regexp.MustCompile(`(?i)\b(experience|work history|employment)\b`)
+	educationHeaderRegex  = regexp.MustCompile(`(?i)\b(education|academic background)\b`)
+	skillsHeaderRegex     = regexp.MustCompile(`(?i)\b(skills|technical proficiencies)\b`)
 )
 
-func ParseTextToCVSections(rawText string) (*Domain.CV, error) {
-	// This is a simplified heuristic parser
-	// A production system might use more advanced NLP techniques
-	cv := &Domain.CV{}
+// ParseTextToCVSections parses raw text into structured CV sections.
+func ParseTextToCVSections(rawText string) (*domain.CV, error) {
+	cv := &domain.CV{}
 	lines := strings.Split(rawText, "\n")
 	var currentSection string
 	var sectionContent strings.Builder
@@ -48,40 +48,38 @@ func ParseTextToCVSections(rawText string) (*Domain.CV, error) {
 		}
 		switch currentSection {
 		case "skills":
-			skills := strings.FieldsFunc(content, func(r rune) { return r == ',' || r == '\n' || r == '•' })
-			skillMap := make(map[string]bool)
+			skills := strings.FieldsFunc(content, func(r rune) bool {
+				return r == ',' || r == '\n' || r == '•'
+			})
+			skillSet := make(map[string]bool)
 			for _, skill := range skills {
-				s := strings.TrimSpace(skill)
-				if s != "" && len(s) < 50 { // Basic sanity check
-					skillMap[s] = true
+				sanitizedSkill := strings.TrimSpace(skill)
+				if sanitizedSkill != "" && len(sanitizedSkill) < 50 { // Basic sanity check
+					skillSet[sanitizedSkill] = true
 				}
 			}
-			for s := range skillMap {
-				cv.Skills = append(cv.Skills, s)
+			for skill := range skillSet {
+				cv.Skills = append(cv.Skills, skill)
 			}
 		}
 		sectionContent.Reset()
 	}
 
 	for _, line := range lines {
-		if expHeaderRegex.MatchString(line) {
+		switch {
+		case experienceHeaderRegex.MatchString(line):
 			processSection()
 			currentSection = "experience"
-			continue
-		}
-		if eduHeaderRegex.MatchString(line) {
+		case educationHeaderRegex.MatchString(line):
 			processSection()
 			currentSection = "education"
-			continue
-		}
-		if skillsHeaderRegex.MatchString(line) {
+		case skillsHeaderRegex.MatchString(line):
 			processSection()
 			currentSection = "skills"
-			continue
-		}
-
-		if currentSection != "" {
-			sectionContent.WriteString(line + "\n")
+		default:
+			if currentSection != "" {
+				sectionContent.WriteString(line + "\n")
+			}
 		}
 	}
 	processSection() // Process the last section

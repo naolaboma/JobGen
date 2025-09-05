@@ -78,8 +78,10 @@ func (w *CVProcessor) processJob(jobID string) {
 		w.repo.UpdateStatus(jobID, domain.StatusFailed, err.Error())
 		return
 	}
+
+	// Ensure suggestions are of the correct type
 	parsedResults.Suggestions = suggestions
-	parsedResults.Score = usecases.CalculateScore(suggestions)
+	parsedResults.Score = usecases.CalculateScore(parsedResults.Suggestions)
 
 	if err := w.repo.UpdateWithResults(jobID, parsedResults); err != nil {
 		log.Printf("🔴 Error saving final results for job %s: %v", jobID, err)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -33,6 +34,8 @@ type APITestSuite struct {
 	authController *controllers.AuthController
 	fileController *controllers.FileController
 	authMiddleware *infrastructure.AuthMiddleware
+	cvController   *controllers.CVController
+	cvUsecase      *MockCVUsecase
 }
 
 // Mock implementations
@@ -49,6 +52,10 @@ type MockAuthUsecase struct {
 }
 
 type MockJWTService struct {
+	mock.Mock
+}
+
+type MockCVUsecase struct {
 	mock.Mock
 }
 
@@ -207,6 +214,19 @@ func (m *MockJWTService) ValidateRefreshToken(tokenString string) (*domain.Refre
 	return args.Get(0).(*domain.RefreshTokenPayload), args.Error(1)
 }
 
+func (m *MockCVUsecase) CreateParsingJob(userID string, fileHeader *multipart.FileHeader) (string, error) {
+	args := m.Called(userID, fileHeader)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockCVUsecase) GetJobStatusAndResult(jobID string) (*domain.CV, error) {
+	args := m.Called(jobID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.CV), args.Error(1)
+}
+
 // Setup and teardown
 func (suite *APITestSuite) SetupTest() {
 	gin.SetMode(gin.TestMode)
@@ -222,9 +242,10 @@ func (suite *APITestSuite) SetupTest() {
 	suite.authController = controllers.NewAuthController(suite.authUsecase)
 	suite.fileController = controllers.NewFileController(suite.fileUsecase)
 	suite.authMiddleware = infrastructure.NewAuthMiddleware(suite.jwtService)
+	suite.cvController = controllers.NewCVController(suite.cvUsecase)
 
 	// Setup router
-	suite.router = router.SetupRouter(suite.userController, suite.authController, suite.authMiddleware, suite.fileController)
+	suite.router = router.SetupRouter(suite.userController, suite.authController, suite.authMiddleware, suite.fileController, suite.cvController)
 }
 
 func (suite *APITestSuite) TearDownTest() {

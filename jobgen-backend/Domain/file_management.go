@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"io"
+	"mime/multipart"
 	"time"
 )
 
@@ -49,4 +50,10 @@ type IFileRepository interface {
 	FindByID(ctx context.Context, ID string) (*File, error)
 	FindByUserID(ctx context.Context, ID string) (*File, error)
 	Delete(ctx context.Context, ID string) error
+}
+
+// FileStorageService defines the interface for file storage operations.
+type FileStorageService interface {
+	UploadFile(userID, category, fileName string, file multipart.File) (string, error)
+	DeleteFile(fileID string) error
 }

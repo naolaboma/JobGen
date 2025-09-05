@@ -2,8 +2,8 @@ package usecases
 
 import (
 	"errors"
-	"jobgen-backend/Domain"
-	"jobgen-backend/Infrastructure"
+	domain "jobgen-backend/Domain"
+	infrastructure "jobgen-backend/Infrastructure"
 	"mime/multipart"
 	"time"
 
@@ -64,6 +64,6 @@ func (uc *cvUsecase) CreateParsingJob(userID string, fileHeader *multipart.FileH
 	return jobID, nil
 }
 
-func (uc *cvUsecase) GetJobStatusAndResult(jobID string) (*omain.CV, error) {
+func (uc *cvUsecase) GetJobStatusAndResult(jobID string) (*domain.CV, error) {
 	return uc.repo.GetByID(jobID)
 }
