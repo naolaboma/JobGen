@@ -5,6 +5,7 @@ import (
 	domain "jobgen-backend/Domain"
 	infrastructure "jobgen-backend/Infrastructure"
 	"mime/multipart"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,6 +13,7 @@ import (
 
 type CVUsecase interface {
 	CreateParsingJob(userID string, fileHeader *multipart.FileHeader) (string, error)
+	CreateParsingJobFromFileID(userID string, fileID string) (string, error)
 	GetJobStatusAndResult(jobID string) (*domain.CV, error)
 }
 
@@ -66,4 +68,27 @@ func (uc *cvUsecase) CreateParsingJob(userID string, fileHeader *multipart.FileH
 
 func (uc *cvUsecase) GetJobStatusAndResult(jobID string) (*domain.CV, error) {
 	return uc.repo.GetByID(jobID)
+}
+
+func (uc *cvUsecase) CreateParsingJobFromFileID(userID string, fileID string) (string, error) {
+	if strings.TrimSpace(fileID) == "" {
+		return "", errors.New("fileId is required")
+	}
+	jobID := uuid.NewString()
+	cv := &domain.CV{
+		ID:            jobID,
+		UserID:        userID,
+		FileStorageID: fileID,
+		FileName:      "",
+		Status:        domain.StatusPending,
+		CreatedAt:     time.Now().UTC(),
+		UpdatedAt:     time.Now().UTC(),
+	}
+	if err := uc.repo.Create(cv); err != nil {
+		return "", err
+	}
+	if err := uc.queue.Enqueue(jobID); err != nil {
+		return "", err
+	}
+	return jobID, nil
 }
