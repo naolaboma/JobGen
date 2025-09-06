@@ -4,6 +4,7 @@ import (
 	controllers "jobgen-backend/Delivery/Controllers"
 	router "jobgen-backend/Delivery/Router"
 	infrastructure "jobgen-backend/Infrastructure"
+	"jobgen-backend/Infrastructure/services"
 	repositories "jobgen-backend/Repositories"
 	usecases "jobgen-backend/Usecases"
 	_ "jobgen-backend/docs" // This line is important for swagger
@@ -51,6 +52,12 @@ func main() {
 	emailVerificationRepo := repositories.NewEmailVerificationRepository(db)
 	passwordResetRepo := repositories.NewPasswordResetRepository(db)
 	contactRepo := repositories.NewContactRepository(db)
+	jobRepo := repositories.NewJobRepository(db)
+
+
+	// Initialize job-related services
+	jobAggregationService := services.NewJobAggregationService(jobRepo)
+	jobMatchingService := services.NewJobMatchingService(jobRepo, userRepo)
 
 	// Initialize use cases
 	contextTimeout := 30 * time.Second
@@ -75,11 +82,19 @@ func main() {
 		emailService,
 		contextTimeout,
 	)
+	jobUsecase := usecases.NewJobUsecase(
+		jobRepo,
+		userRepo,
+		jobAggregationService,
+		jobMatchingService,
+		contextTimeout,
+	)
 
 	// Initialize controllers
 	userController := controllers.NewUserController(userUsecase)
 	authController := controllers.NewAuthController(authUsecase)
 	contactController := controllers.NewContactController(contactUsecase)
+	jobController := controllers.NewJobController(jobUsecase)
 
 	// MinIO Setup
 	minioURL := infrastructure.Env.FileStorageURL
@@ -102,6 +117,7 @@ func main() {
 	router := router.SetupRouter(
 		userController,
 		authController,
+		jobController,
 		authMiddleware,
 		fileController,
 		contactController,

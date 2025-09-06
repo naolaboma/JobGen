@@ -44,4 +44,19 @@ var (
 	ErrInvalidFileFormat = errors.New("file size exceeds the allowed limits")
 	ErrUnknownFileType   = errors.New("file size exceeds the allowed limits")
 	ErrFileNotFound      = errors.New("file size exceeds the allowed limits")
+
+	// Job-related errors
+	ErrJobNotFound    = errors.New("job not found")
+	ErrJobExists      = errors.New("job already exists")
+	ErrInvalidJobData = errors.New("invalid job data")
+	ErrNotFound       = errors.New("resource not found")
+
+	// Scraping errors
+	ErrScrapingFailed     = errors.New("scraping failed")
+	ErrRateLimitExceeded  = errors.New("rate limit exceeded")
+	ErrSourceUnavailable  = errors.New("job source unavailable")
+
+	// Matching errors
+	ErrNoMatchingJobs     = errors.New("no matching jobs found")
+	ErrInvalidPreferences = errors.New("invalid user preferences")
 )

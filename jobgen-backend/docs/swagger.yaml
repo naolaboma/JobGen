@@ -11,6 +11,41 @@ definitions:
     - new_password
     - old_password
     type: object
+  controllers.CreateJobRequest:
+    properties:
+      apply_url:
+        type: string
+      company_name:
+        type: string
+      description:
+        type: string
+      extracted_skills:
+        items:
+          type: string
+        type: array
+      full_description_html:
+        type: string
+      is_sponsorship_available:
+        type: boolean
+      location:
+        type: string
+      salary:
+        type: string
+      source:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    required:
+    - apply_url
+    - company_name
+    - description
+    - location
+    - title
+    type: object
   controllers.ErrorInfo:
     properties:
       code:
@@ -127,6 +162,21 @@ definitions:
         type: string
       success:
         type: boolean
+    type: object
+  controllers.UpdateJobRequest:
+    properties:
+      company_name:
+        type: string
+      description:
+        type: string
+      extracted_skills:
+        items:
+          type: string
+        type: array
+      location:
+        type: string
+      title:
+        type: string
     type: object
   controllers.UpdateProfileRequest:
     properties:
@@ -248,6 +298,166 @@ info:
   title: JobGen API
   version: "1.0"
 paths:
+  /admin/jobs:
+    post:
+      consumes:
+      - application/json
+      description: Create a new job listing (Admin only)
+      parameters:
+      - description: Job details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateJobRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Job created successfully
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new job
+      tags:
+      - Admin
+  /admin/jobs/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a job listing (Admin only)
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Job deleted successfully
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "404":
+          description: Job not found
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a job
+      tags:
+      - Admin
+    put:
+      consumes:
+      - application/json
+      description: Update an existing job listing (Admin only)
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Job update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateJobRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Job updated successfully
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "404":
+          description: Job not found
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a job
+      tags:
+      - Admin
+  /admin/jobs/aggregate:
+    post:
+      consumes:
+      - application/json
+      description: Manually trigger job aggregation from all sources (Admin only)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Job aggregation started
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Trigger job aggregation
+      tags:
+      - Admin
   /admin/users:
     get:
       consumes:
@@ -899,6 +1109,313 @@ paths:
       summary: Upload profile picture
       tags:
       - Files
+  /jobs:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve jobs with optional filtering by query, skills, location,
+        etc.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page (max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Search query for title, company, or description
+        in: query
+        name: query
+        type: string
+      - description: Comma-separated list of skills
+        in: query
+        name: skills
+        type: string
+      - description: Location filter
+        in: query
+        name: location
+        type: string
+      - description: Filter by sponsorship availability
+        in: query
+        name: sponsorship
+        type: boolean
+      - description: Filter by job source
+        in: query
+        name: source
+        type: string
+      - default: posted_at
+        description: Sort field
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of jobs
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      summary: Get all jobs with filtering and pagination
+      tags:
+      - Jobs
+  /jobs/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve detailed information about a specific job
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Job details
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "404":
+          description: Job not found
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      summary: Get a specific job by ID
+      tags:
+      - Jobs
+  /jobs/matched:
+    get:
+      consumes:
+      - application/json
+      description: Get personalized job recommendations based on user profile
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page (max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Matched jobs for user
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Get matched jobs for authenticated user
+      tags:
+      - Jobs
+  /jobs/search:
+    get:
+      consumes:
+      - application/json
+      description: Search and filter jobs with personalized matching if user is authenticated
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page (max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Search query for title, company, or description
+        in: query
+        name: query
+        type: string
+      - description: Comma-separated list of skills
+        in: query
+        name: skills
+        type: string
+      - description: Location filter
+        in: query
+        name: location
+        type: string
+      - description: Filter by sponsorship availability
+        in: query
+        name: sponsorship
+        type: boolean
+      - description: Filter by job source
+        in: query
+        name: source
+        type: string
+      - default: posted_at
+        description: Sort field
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Personalized job search results
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Search jobs with user context
+      tags:
+      - Jobs
+  /jobs/search-by-skills:
+    get:
+      consumes:
+      - application/json
+      description: Quick search for jobs based on specific skills
+      parameters:
+      - description: Comma-separated list of skills
+        in: query
+        name: skills
+        required: true
+        type: string
+      - default: 20
+        description: Number of jobs to return (max 50)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Jobs matching skills
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      summary: Search jobs by skills
+      tags:
+      - Jobs
+  /jobs/sources:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all supported job scraping sources
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of job sources
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      summary: Get supported job sources
+      tags:
+      - Jobs
+  /jobs/stats:
+    get:
+      consumes:
+      - application/json
+      description: Get statistics about jobs in the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Job statistics
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      summary: Get job statistics
+      tags:
+      - Jobs
+  /jobs/trending:
+    get:
+      consumes:
+      - application/json
+      description: Get currently trending job listings
+      parameters:
+      - default: 20
+        description: Number of jobs to return (max 50)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Trending jobs
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      summary: Get trending jobs
+      tags:
+      - Jobs
   /users/account:
     delete:
       consumes:
