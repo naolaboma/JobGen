@@ -967,6 +967,126 @@
                 }
             }
         },
+        "/cv": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Start a parsing job by uploading a file (multipart) or providing an existing fileId in JSON body.",
+                "consumes": [
+                    "multipart/form-data",
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CV"
+                ],
+                "summary": "Start CV parsing job (file or reference)",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "CV PDF file",
+                        "name": "file",
+                        "in": "formData"
+                    },
+                    {
+                        "description": "Provide when using existing fileId",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.CVFileRefRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Job accepted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/cv/parse": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload a CV PDF via multipart and start a parsing job.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CV"
+                ],
+                "summary": "Start CV parsing job (multipart)",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "CV PDF file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Job accepted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/files/profile-picture/me": {
             "get": {
                 "security": [
@@ -1862,6 +1982,14 @@
         }
     },
     "definitions": {
+        "controllers.CVFileRefRequest": {
+            "type": "object",
+            "properties": {
+                "fileId": {
+                    "type": "string"
+                }
+            }
+        },
         "controllers.ChangePasswordRequest": {
             "type": "object",
             "required": [
