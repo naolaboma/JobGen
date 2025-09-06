@@ -113,15 +113,38 @@ func main() {
 	fileUsecase := usecases.NewFileUsecase(fileRepo, minioService)
 	fileController := controllers.NewFileController(fileUsecase)
 
+	// --- Initialize Repositories ---
+	cvRepo, err := repositories.NewCVRepository(db) // New CV Repo
+	if err != nil {
+		log.Fatalf("🔴 Could not create CV Repository: %v", err)
+	}
+
+	// --- Initialize Infrastructure & Services ---
+	cvParserService := infrastructure.NewCVParserService()                             // New CV Parser
+	queueService := infrastructure.NewQueueService(redisClient, "cv_processing_queue") // New Queue Service
+	aiServiceClient := infrastructure.NewAIServiceClient()                             // New (Mock) AI Service Client
+
+	// --- Initialize Usecases ---
+	cvUsecase := usecases.NewCVUsecase(cvRepo, queueService, minioService) // New CV Usecase
+
+	// --- Initialize Controllers ---
+	cvController := controllers.NewCVController(cvUsecase) // New CV Controller
+
+	// --- Start Background Worker ---
+	cvProcessor := worker.NewCVProcessor(queueService, cvRepo, cvParserService, minioService, aiServiceClient)
+	go cvProcessor.Start() // Run the worker in a separate goroutine
+
 	// Setup router
 	router := router.SetupRouter(
 		userController,
 		authController,
 		jobController,
+    cvController
 		authMiddleware,
 		fileController,
 		contactController,
 	)
+
 
 	// Start server
 	port := infrastructure.Env.Port
