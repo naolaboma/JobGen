@@ -246,6 +246,7 @@ func (suite *APITestSuite) SetupTest() {
 
 	// Setup router
 	suite.router = router.SetupRouter(suite.userController, suite.authController, suite.authMiddleware, suite.fileController, suite.cvController)
+
 }
 
 func (suite *APITestSuite) TearDownTest() {

@@ -16,6 +16,7 @@ type EmailService struct {
 	username string
 	password string
 	dialer   *gomail.Dialer
+	adminEmail string // New field for admin email
 }
 
 func NewEmailService() domain.IEmailService {
@@ -30,6 +31,7 @@ func NewEmailService() domain.IEmailService {
 		username: Env.EmailUsername,
 		password: Env.EmailPassword,
 		dialer:   dialer,
+		adminEmail: Env.AdminEmail, // Initialize admin email
 	}
 }
 
@@ -85,11 +87,9 @@ func (e *EmailService) SendWelcomeEmail(ctx context.Context, user *domain.User, 
 
 	return e.sendEmail(user.Email, subject, body)
 }
-
 func (e *EmailService) SendPasswordResetEmail(ctx context.Context, user *domain.User, resetToken string) error {
-	subject := "Reset Your JobGen Password"
-	resetLink := fmt.Sprintf("%s/reset-password?token=%s", Env.FrontendURL, resetToken)
-	
+	subject := "Your JobGen Password Reset Code"
+
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -98,37 +98,32 @@ func (e *EmailService) SendPasswordResetEmail(ctx context.Context, user *domain.
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
-        .button { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-        .warning { background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; text-align: center; }
+        .otp-box { display: inline-block; font-size: 32px; font-weight: bold; letter-spacing: 5px; padding: 15px 25px; background: #fff; border: 2px dashed #667eea; border-radius: 8px; margin: 20px 0; }
+        .warning { background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 5px; margin: 20px 0; text-align: left; }
         .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Password Reset Request</h1>
+            <h1>Password Reset Code</h1>
         </div>
         <div class="content">
             <h2>Hi %s,</h2>
             <p>We received a request to reset your JobGen account password.</p>
-            
-            <p>Click the button below to reset your password:</p>
-            <p style="text-align: center;">
-                <a href="%s" class="button">Reset Password</a>
-            </p>
-            
+            <p>Use the code below to reset your password:</p>
+
+            <div class="otp-box">%s</div>
+
             <div class="warning">
                 <strong>Security Notice:</strong>
                 <ul>
-                    <li>This link expires in 1 hour</li>
+                    <li>This code expires in 15 minutes</li>
                     <li>If you didn't request this reset, please ignore this email</li>
-                    <li>For security, this link can only be used once</li>
+                    <li>For security, this code can only be used once</li>
                 </ul>
             </div>
-            
-            <p>If the button doesn't work, copy and paste this link:</p>
-            <p><a href="%s">%s</a></p>
         </div>
         <div class="footer">
             <p>This is an automated email from JobGen. Please do not reply.</p>
@@ -136,7 +131,7 @@ func (e *EmailService) SendPasswordResetEmail(ctx context.Context, user *domain.
         </div>
     </div>
 </body>
-</html>`, user.FullName, resetLink, resetLink, resetLink)
+</html>`, user.FullName, resetToken)
 
 	return e.sendEmail(user.Email, subject, body)
 }
@@ -207,6 +202,126 @@ func (e *EmailService) SendRoleChangeNotification(ctx context.Context, user *dom
 </html>`, user.FullName, string(newRole))
 
 	return e.sendEmail(user.Email, subject, body)
+}
+func (e *EmailService) SendContactFormToAdmin(ctx context.Context, contact *domain.Contact) error {
+	if e.adminEmail == "" {
+		return fmt.Errorf("admin email is not configured")
+	}
+
+	subject := fmt.Sprintf("JobGen Contact Form: %s (From: %s)", contact.Subject, contact.Name)
+
+	body := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>New Contact Form Submission</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f8;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 650px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-top: 6px solid #667eea;
+        }
+        .header {
+            background-color: #667eea;
+            color: #ffffff;
+            text-align: center;
+            padding: 25px 20px;
+        }
+        .header h2 {
+            margin: 0;
+        }
+        .content {
+            padding: 25px 30px;
+        }
+        .field {
+            margin-bottom: 15px;
+        }
+        .field strong {
+            display: inline-block;
+            width: 90px;
+            color: #555;
+        }
+        .message-box {
+            background: #f1f5fb;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            padding: 18px 22px;
+            border-radius: 8px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #1f2937;
+        }
+        .button {
+            display: inline-block;
+            background-color: #667eea;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            margin-top: 20px;
+            transition: background 0.3s ease;
+        }
+        .button:hover {
+            background-color: #5562c1;
+        }
+        .footer {
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #eee;
+        }
+        @media screen and (max-width: 680px) {
+            .container { margin: 20px; }
+            .content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>New Contact Form Submission</h2>
+        </div>
+        <div class="content">
+            <div class="field"><strong>Name:</strong> %s</div>
+            <div class="field"><strong>Email:</strong> %s</div>
+            <div class="field"><strong>Subject:</strong> %s</div>
+            <div class="message-box">
+                %s
+            </div>
+            <p style="margin-top: 20px; font-size: 14px;">Received on: %s</p>
+            <a href="mailto:%s" class="button">Reply to User</a>
+        </div>
+        <div class="footer">
+            <p>This is an automated notification from JobGen contact form.</p>
+        </div>
+    </div>
+</body>
+</html>`,
+		contact.Name,
+		contact.Email,
+		contact.Subject,
+		contact.Message,
+		contact.CreatedAt.Format("2006-01-02 15:04:05 MST"),
+		contact.Email,
+	)
+
+	return e.sendEmail(e.adminEmail, subject, body)
 }
 
 func (e *EmailService) sendEmail(to, subject, body string) error {

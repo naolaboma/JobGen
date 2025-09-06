@@ -85,6 +85,7 @@ func (f *fileUsecase) Download(ctx context.Context, fileID string, userID string
 	key := file.UniqueID
 	url, err := f.s3s.PresignedURL(ctx, file.BucketName, key)
 	if err != nil {
+		
 		return "", fmt.Errorf("failed to generate presigned url: %w", domain.ErrInternal)
 	}
 	return url, err

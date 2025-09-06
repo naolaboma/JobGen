@@ -28,6 +28,7 @@ type EnvConfig struct {
 	EmailPort     string
 	EmailUsername string
 	EmailPassword string
+	AdminEmail    string // New: Admin email for notifications
 	
 	// Frontend URL (for email links)
 	FrontendURL string
@@ -70,6 +71,7 @@ func LoadEnv() {
 		EmailPort:           getEnv("EMAIL_PORT", "587"),
 		EmailUsername:       getEnv("EMAIL_USERNAME", ""),
 		EmailPassword:       getEnv("EMAIL_PASSWORD", ""),
+		AdminEmail:          getEnv("ADMIN_EMAIL", ""), // New: Get admin email from env
 		FrontendURL:         getEnv("FRONTEND_URL", "http://localhost:3000"),
 		AccessKey: 			 getEnv("STORAGE_ACCESS_KEY", ""),
 		SecretKey: 			 getEnv("STORAGE_SECRET_KEY", ""),
@@ -85,6 +87,10 @@ func LoadEnv() {
 	
 	if Env.MongoDBURI == "" {
 		log.Fatal("MONGODB_URI is required")
+	}
+	// AdminEmail is not strictly required but good to warn if not set for contact forms
+	if Env.AdminEmail == "" {
+		log.Println("Warning: ADMIN_EMAIL is not set. Contact form submissions will not be emailed to an administrator.")
 	}
 }
 

@@ -7,4 +7,5 @@ type IEmailService interface {
 	SendPasswordResetEmail(ctx context.Context, user *User, resetToken string) error
 	SendAccountDeactivationEmail(ctx context.Context, user *User) error
 	SendRoleChangeNotification(ctx context.Context, user *User, newRole Role) error
+	SendContactFormToAdmin(ctx context.Context, contact *Contact) error // ✅ Add this
 }

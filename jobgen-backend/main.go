@@ -4,6 +4,7 @@ import (
 	controllers "jobgen-backend/Delivery/Controllers"
 	router "jobgen-backend/Delivery/Router"
 	infrastructure "jobgen-backend/Infrastructure"
+	"jobgen-backend/Infrastructure/services"
 	repositories "jobgen-backend/Repositories"
 	usecases "jobgen-backend/Usecases"
 	_ "jobgen-backend/docs" // This line is important for swagger
@@ -50,6 +51,13 @@ func main() {
 	refreshTokenRepo := repositories.NewRefreshTokenRepository(db)
 	emailVerificationRepo := repositories.NewEmailVerificationRepository(db)
 	passwordResetRepo := repositories.NewPasswordResetRepository(db)
+	contactRepo := repositories.NewContactRepository(db)
+	jobRepo := repositories.NewJobRepository(db)
+
+
+	// Initialize job-related services
+	jobAggregationService := services.NewJobAggregationService(jobRepo)
+	jobMatchingService := services.NewJobMatchingService(jobRepo, userRepo)
 
 	// Initialize use cases
 	contextTimeout := 30 * time.Second
@@ -69,12 +77,26 @@ func main() {
 		refreshTokenRepo,
 		contextTimeout,
 	)
+	contactUsecase := usecases.NewContactUsecase(
+		contactRepo,
+		emailService,
+		contextTimeout,
+	)
+	jobUsecase := usecases.NewJobUsecase(
+		jobRepo,
+		userRepo,
+		jobAggregationService,
+		jobMatchingService,
+		contextTimeout,
+	)
 
 	// Initialize controllers
 	userController := controllers.NewUserController(userUsecase)
 	authController := controllers.NewAuthController(authUsecase)
+	contactController := controllers.NewContactController(contactUsecase)
+	jobController := controllers.NewJobController(jobUsecase)
 
-	// --- MinIO Setup ---
+	// MinIO Setup
 	minioURL := infrastructure.Env.FileStorageURL
 	minioAccessKey := infrastructure.Env.AccessKey
 	minioSecretKey := infrastructure.Env.SecretKey
@@ -86,13 +108,10 @@ func main() {
 		log.Fatal("MinIO setup error:", err)
 	}
 
-	// --- Repository ---
+	// File Repository and Usecase
 	fileRepo := repositories.NewFileRepository(db)
 	fileUsecase := usecases.NewFileUsecase(fileRepo, minioService)
-
-	// --- Controller ---
 	fileController := controllers.NewFileController(fileUsecase)
-	// ----------------------------
 
 	// --- Initialize Repositories ---
 	cvRepo, err := repositories.NewCVRepository(db) // New CV Repo
@@ -116,7 +135,16 @@ func main() {
 	go cvProcessor.Start() // Run the worker in a separate goroutine
 
 	// Setup router
-	router := router.SetupRouter(userController, authController, authMiddleware, fileController, cvController)
+	router := router.SetupRouter(
+		userController,
+		authController,
+		jobController,
+    cvController
+		authMiddleware,
+		fileController,
+		contactController,
+	)
+
 
 	// Start server
 	port := infrastructure.Env.Port

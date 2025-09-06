@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 	domain "jobgen-backend/Domain"
 	"time"
 
@@ -93,7 +94,9 @@ func (r *RefreshTokenRepository) RevokeToken(ctx context.Context, tokenString st
 
 func (r *RefreshTokenRepository) DeleteAllTokensForUser(ctx context.Context, userID string) error {
 	filter := bson.M{"user_id": userID}
+	fmt.Println("fliter refresh Token", filter)
 	_, err := r.collection.DeleteMany(ctx, filter)
+	fmt.Println("After Delete Many", err)
 	return err
 }
 
