@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"jobgen-backend/Usecases"
+	usecases "jobgen-backend/Usecases"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -22,9 +22,9 @@ func (ctrl *CVController) StartParsingJobHandler(c *gin.Context) {
 		return
 	}
 
-	// In the real app, userID should be extracted from the JWT token in middleware
-	userID, exists := c.Get("userID")
-	if !exists {
+	// Extract user ID set by AuthMiddleware
+	userID, exists := c.Get("user_id")
+	if !exists || userID.(string) == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
@@ -50,8 +50,8 @@ func (ctrl *CVController) GetParsingJobStatusHandler(c *gin.Context) {
 	}
 
 	// Basic authorization check: does the requesting user own this CV?
-	requestingUserID, _ := c.Get("userID")
-	if cv.UserID != requestingUserID {
+	requestingUserID, _ := c.Get("user_id")
+	if requestingUserID == nil || cv.UserID != requestingUserID.(string) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "you are not authorized to view this CV"})
 		return
 	}

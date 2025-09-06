@@ -6,6 +6,7 @@ import (
 	infrastructure "jobgen-backend/Infrastructure"
 	repositories "jobgen-backend/Repositories"
 	usecases "jobgen-backend/Usecases"
+	worker "jobgen-backend/Worker"
 	_ "jobgen-backend/docs" // This line is important for swagger
 	"log"
 	"time"
@@ -101,22 +102,24 @@ func main() {
 	}
 
 	// --- Initialize Infrastructure & Services ---
-	cvParserService := infrastructure.NewCVParserService()                             // New CV Parser
+	cvParserService := infrastructure.NewCVParserService() // New CV Parser
+	// Initialize Redis client
+	redisClient := infrastructure.NewRedisClient(infrastructure.Env.RedisURL)
 	queueService := infrastructure.NewQueueService(redisClient, "cv_processing_queue") // New Queue Service
 	aiServiceClient := infrastructure.NewAIServiceClient()                             // New (Mock) AI Service Client
 
 	// --- Initialize Usecases ---
-	cvUsecase := usecases.NewCVUsecase(cvRepo, queueService, minioService) // New CV Usecase
+	cvUsecase := usecases.NewCVUsecase(cvRepo, queueService, fileUsecase) // pass fileUsecase
 
 	// --- Initialize Controllers ---
 	cvController := controllers.NewCVController(cvUsecase) // New CV Controller
 
 	// --- Start Background Worker ---
-	cvProcessor := worker.NewCVProcessor(queueService, cvRepo, cvParserService, minioService, aiServiceClient)
+	cvProcessor := worker.NewCVProcessor(queueService, cvRepo, cvParserService, fileUsecase, aiServiceClient)
 	go cvProcessor.Start() // Run the worker in a separate goroutine
 
 	// Setup router
-	router := router.SetupRouter(userController, authController, authMiddleware, fileController, cvController)
+	r := router.SetupRouter(userController, authController, authMiddleware, fileController, cvController)
 
 	// Start server
 	port := infrastructure.Env.Port
@@ -128,7 +131,7 @@ func main() {
 	log.Printf("Environment: %s", infrastructure.Env.Environment)
 	log.Printf("Swagger documentation available at: http://localhost:%s/swagger/index.html", port)
 
-	if err := router.Run(":" + port); err != nil {
+	if err := r.Run(":" + port); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
 }

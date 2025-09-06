@@ -1,12 +1,11 @@
 package infrastructure
 
 import (
+	"bytes"
 	"io"
 	"os"
-	"strings"
 
-	"github.com/unidoc/unipdf/v3/extractor"
-	"github.com/unidoc/unipdf/v3/model"
+	pdf "github.com/ledongthuc/pdf"
 )
 
 type CVParserService interface {
@@ -20,6 +19,7 @@ func NewCVParserService() CVParserService {
 }
 
 func (p *pdfParserService) ExtractText(reader io.Reader) (string, error) {
+	// Write incoming reader to a temp file so parsers that require a path can read it
 	tempFile, err := os.CreateTemp("", "upload-*.pdf")
 	if err != nil {
 		return "", err
@@ -31,38 +31,20 @@ func (p *pdfParserService) ExtractText(reader io.Reader) (string, error) {
 		return "", err
 	}
 
-	f, err := os.Open(tempFile.Name())
+	// Open the PDF using ledongthuc/pdf
+	f, r, err := pdf.Open(tempFile.Name())
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
 
-	pdfReader, err := model.NewPdfReader(f)
+	plain, err := r.GetPlainText()
 	if err != nil {
 		return "", err
 	}
-
-	numPages, err := pdfReader.GetNumPages()
-	if err != nil {
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(plain); err != nil {
 		return "", err
 	}
-
-	var allText strings.Builder
-	for i := 1; i <= numPages; i++ {
-		page, err := pdfReader.GetPage(i)
-		if err != nil {
-			return "", err
-		}
-		ex, err := extractor.New(page)
-		if err != nil {
-			return "", err
-		}
-		pageText, err := ex.ExtractText()
-		if err != nil {
-			return "", err
-		}
-		allText.WriteString(pageText + "\n")
-	}
-
-	return allText.String(), nil
+	return buf.String(), nil
 }

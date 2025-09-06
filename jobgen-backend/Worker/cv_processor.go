@@ -1,27 +1,31 @@
 package Worker
 
 import (
-	"jobgen-backend/domain"
-	"jobgen-backend/infrastructure"
-	"jobgen-backend/usecases"
+	"context"
+	"io"
 	"log"
+	"net/http"
+
+	domain "jobgen-backend/Domain"
+	infrastructure "jobgen-backend/Infrastructure"
+	usecases "jobgen-backend/Usecases"
 )
 
 type CVProcessor struct {
-	queue     infrastructure.QueueService
-	repo      domain.CVRepository
-	parser    infrastructure.CVParserService
-	fileStore infrastructure.FileStorageService
-	aiService domain.AIService
+	queue       infrastructure.QueueService
+	repo        domain.CVRepository
+	parser      infrastructure.CVParserService
+	fileUsecase domain.IFileUsecase
+	aiService   domain.AIService
 }
 
-func NewCVProcessor(q infrastructure.QueueService, r domain.CVRepository, p infrastructure.CVParserService, fs infrastructure.FileStorageService, ai domain.AIService) *CVProcessor {
+func NewCVProcessor(q infrastructure.QueueService, r domain.CVRepository, p infrastructure.CVParserService, fu domain.IFileUsecase, ai domain.AIService) *CVProcessor {
 	return &CVProcessor{
-		queue:     q,
-		repo:      r,
-		parser:    p,
-		fileStore: fs,
-		aiService: ai,
+		queue:       q,
+		repo:        r,
+		parser:      p,
+		fileUsecase: fu,
+		aiService:   ai,
 	}
 }
 
@@ -49,15 +53,28 @@ func (w *CVProcessor) processJob(jobID string) {
 		return
 	}
 
-	file, err := w.fileStore.GetFile(cv.FileStorageID)
+	// Generate a presigned URL and fetch file content
+	url, err := w.fileUsecase.Download(context.Background(), cv.FileStorageID, cv.UserID)
 	if err != nil {
-		log.Printf("🔴 Error getting file from storage for job %s: %v", jobID, err)
+		log.Printf("🔴 Error generating download URL for job %s: %v", jobID, err)
 		w.repo.UpdateStatus(jobID, domain.StatusFailed, err.Error())
 		return
 	}
-	defer file.Close()
+	resp, err := http.Get(url)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		if err == nil {
+			err = io.EOF
+		}
+		log.Printf("🔴 Error downloading file for job %s: %v", jobID, err)
+		w.repo.UpdateStatus(jobID, domain.StatusFailed, "failed to download file")
+		if resp != nil {
+			resp.Body.Close()
+		}
+		return
+	}
+	defer resp.Body.Close()
 
-	rawText, err := w.parser.ExtractText(file)
+	rawText, err := w.parser.ExtractText(resp.Body)
 	if err != nil {
 		log.Printf("🔴 Error parsing PDF for job %s: %v", jobID, err)
 		w.repo.UpdateStatus(jobID, domain.StatusFailed, err.Error())

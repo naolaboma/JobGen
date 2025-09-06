@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"context"
 	"errors"
 	domain "jobgen-backend/Domain"
 	infrastructure "jobgen-backend/Infrastructure"
@@ -16,13 +17,13 @@ type CVUsecase interface {
 }
 
 type cvUsecase struct {
-	repo      domain.CVRepository
-	queue     infrastructure.QueueService
-	fileStore domain.FileStorageService // From file_management.go
+	repo        domain.CVRepository
+	queue       infrastructure.QueueService
+	fileUsecase domain.IFileUsecase // use higher-level file usecase
 }
 
-func NewCVUsecase(repo domain.CVRepository, q infrastructure.QueueService, fs domain.FileStorageService) CVUsecase {
-	return &cvUsecase{repo: repo, queue: q, fileStore: fs}
+func NewCVUsecase(repo domain.CVRepository, q infrastructure.QueueService, fu domain.IFileUsecase) CVUsecase {
+	return &cvUsecase{repo: repo, queue: q, fileUsecase: fu}
 }
 
 func (uc *cvUsecase) CreateParsingJob(userID string, fileHeader *multipart.FileHeader) (string, error) {
@@ -37,8 +38,16 @@ func (uc *cvUsecase) CreateParsingJob(userID string, fileHeader *multipart.FileH
 	}
 	defer file.Close()
 
-	// Integrate with File Storage Service
-	fileID, err := uc.fileStore.UploadFile(userID, "CV", fileHeader.Filename, file)
+	// Upload via File Usecase and store metadata
+	meta := &domain.File{
+		UserID:     userID,
+		FileName:   fileHeader.Filename,
+		BucketName: "documents",
+		Size:       fileHeader.Size,
+	}
+	savedMeta, err := uc.fileUsecase.Upload(
+		context.Background(), file, meta,
+	)
 	if err != nil {
 		return "", err
 	}
@@ -47,7 +56,7 @@ func (uc *cvUsecase) CreateParsingJob(userID string, fileHeader *multipart.FileH
 	cv := &domain.CV{
 		ID:            jobID,
 		UserID:        userID,
-		FileStorageID: fileID,
+		FileStorageID: savedMeta.ID, // store DB ID for later download
 		FileName:      fileHeader.Filename,
 		Status:        domain.StatusPending,
 		CreatedAt:     time.Now().UTC(),
