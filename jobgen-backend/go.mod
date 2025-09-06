@@ -3,6 +3,7 @@ module jobgen-backend
 go 1.24.5
 
 require (
+	github.com/ledongthuc/pdf v0.0.0-20220302134840-0c2507a12d80
 	github.com/gabriel-vasile/mimetype v1.4.10
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-redis/redis/v8 v8.11.5

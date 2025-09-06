@@ -1,9 +1,9 @@
 package Worker
 
 import (
-	"jobgen-backend/domain"
-	"jobgen-backend/infrastructure"
-	"jobgen-backend/usecases"
+	domain "jobgen-backend/Domain"
+	infrastructure "jobgen-backend/Infrastructure"
+	usecases "jobgen-backend/Usecases"
 	"log"
 )
 
@@ -71,6 +71,11 @@ func (w *CVProcessor) processJob(jobID string) {
 		return
 	}
 	parsedResults.RawText = rawText
+
+	// Heuristic low-confidence: if no sections detected, flag for manual review
+	if len(parsedResults.Skills) == 0 && len(parsedResults.Experiences) == 0 && len(parsedResults.Educations) == 0 {
+		parsedResults.ProcessingError = "low_confidence_parse"
+	}
 
 	suggestions, err := w.aiService.AnalyzeCV(rawText)
 	if err != nil {

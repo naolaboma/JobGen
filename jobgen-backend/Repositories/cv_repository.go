@@ -2,7 +2,8 @@ package repositories
 
 import (
 	"context"
-	"jobgen-backend/Domain"
+	domain "jobgen-backend/Domain"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -14,23 +15,24 @@ type mongoCVRepository struct {
 	collection *mongo.Collection
 }
 
-// NewCVRepository creates a new CV repository with MongoDB and ensures indexes are set.
 func NewCVRepository(db *mongo.Database) (domain.CVRepository, error) {
 	collection := db.Collection("cvs")
 
 	// Create indexes for performance and searching
 	_, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		{
-			Keys:    bson.D{{Key: "userid", Value: 1}},
+			Keys:    bson.D{{Key: "userId", Value: 1}},
 			Options: options.Index().SetUnique(false),
 		},
 		{
-			Keys:    bson.D{{Key: "rawtext", Value: "text"}, {Key: "skills", Value: "text"}},
+			Keys:    bson.D{{Key: "rawText", Value: "text"}, {Key: "skills", Value: "text"}},
 			Options: options.Index().SetName("TextSearchIndex"),
 		},
 	})
 	if err != nil {
-		return nil, err
+		if !strings.Contains(err.Error(), "IndexOptionsConflict") {
+			return nil, err
+		}
 	}
 
 	return &mongoCVRepository{collection: collection}, nil
@@ -51,11 +53,11 @@ func (r *mongoCVRepository) UpdateStatus(id string, status domain.JobStatus, pro
 	update := bson.M{
 		"$set": bson.M{
 			"status":    status,
-			"updatedat": time.Now().UTC(),
+			"updatedAt": time.Now().UTC(),
 		},
 	}
 	if len(procError) > 0 && procError[0] != "" {
-		update["$set"].(bson.M)["processingerror"] = procError[0]
+		update["$set"].(bson.M)["processingError"] = procError[0]
 	}
 
 	_, err := r.collection.UpdateOne(context.Background(), bson.M{"_id": id}, update)
@@ -66,14 +68,14 @@ func (r *mongoCVRepository) UpdateWithResults(id string, results *domain.CV) err
 	update := bson.M{
 		"$set": bson.M{
 			"status":         domain.StatusCompleted,
-			"rawtext":        results.RawText,
-			"profilesummary": results.ProfileSummary,
+			"rawText":        results.RawText,
+			"profileSummary": results.ProfileSummary,
 			"experiences":    results.Experiences,
 			"educations":     results.Educations,
 			"skills":         results.Skills,
 			"suggestions":    results.Suggestions,
 			"score":          results.Score,
-			"updatedat":      time.Now().UTC(),
+			"updatedAt":      time.Now().UTC(),
 		},
 	}
 	_, err := r.collection.UpdateOne(context.Background(), bson.M{"_id": id}, update)

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	controllers "jobgen-backend/Delivery/Controllers"
 	router "jobgen-backend/Delivery/Router"
@@ -127,9 +126,9 @@ func (m *MockUserUsecase) ChangePassword(ctx context.Context, userID, oldPasswor
 	return args.Error(0)
 }
 
-func (m *MockUserUsecase) RequestPasswordReset(ctx context.Context, email string) (string, error) {
+func (m *MockUserUsecase) RequestPasswordResetOTP(ctx context.Context, email string) error {
 	args := m.Called(ctx, email)
-	return args.String(0), args.Error(1)
+	return args.Error(0)
 }
 
 func (m *MockUserUsecase) ResetPassword(ctx context.Context, input domain.ResetPasswordInput) error {
@@ -165,8 +164,8 @@ func (m *MockUserUsecase) DeleteUser(ctx context.Context, adminUserID, targetUse
 	return args.Error(0)
 }
 
-func (m *MockUserUsecase) ResendOTP(ctx context.Context, email string) error {
-	args := m.Called(ctx, email)
+func (m *MockUserUsecase) ResendOTP(ctx context.Context, email string, purpose domain.OTPPurpose) error {
+	args := m.Called(ctx, email, purpose)
 	return args.Error(0)
 }
 
@@ -219,6 +218,11 @@ func (m *MockCVUsecase) CreateParsingJob(userID string, fileHeader *multipart.Fi
 	return args.String(0), args.Error(1)
 }
 
+func (m *MockCVUsecase) CreateParsingJobFromFileID(userID string, fileID string) (string, error) {
+	args := m.Called(userID, fileID)
+	return args.String(0), args.Error(1)
+}
+
 func (m *MockCVUsecase) GetJobStatusAndResult(jobID string) (*domain.CV, error) {
 	args := m.Called(jobID)
 	if args.Get(0) == nil {
@@ -236,6 +240,7 @@ func (suite *APITestSuite) SetupTest() {
 	suite.authUsecase = new(MockAuthUsecase)
 	suite.jwtService = new(MockJWTService)
 	suite.fileUsecase = new(MockFileUsecase)
+	suite.cvUsecase = new(MockCVUsecase)
 
 	// Initialize controllers
 	suite.userController = controllers.NewUserController(suite.userUsecase)
@@ -243,9 +248,20 @@ func (suite *APITestSuite) SetupTest() {
 	suite.fileController = controllers.NewFileController(suite.fileUsecase)
 	suite.authMiddleware = infrastructure.NewAuthMiddleware(suite.jwtService)
 	suite.cvController = controllers.NewCVController(suite.cvUsecase)
+	// Controllers required by router but not used in these tests
+	jobController := controllers.NewJobController(nil)
+	contactController := controllers.NewContactController(nil)
 
 	// Setup router
-	suite.router = router.SetupRouter(suite.userController, suite.authController, suite.authMiddleware, suite.fileController, suite.cvController)
+	suite.router = router.SetupRouter(
+		suite.userController,
+		suite.authController,
+		jobController,
+		suite.authMiddleware,
+		suite.fileController,
+		suite.cvController,
+		contactController,
+	)
 
 }
 
@@ -291,31 +307,7 @@ func (suite *APITestSuite) makeAuthenticatedRequest(method, path string, body in
 	return suite.makeRequest(method, path, body, headers)
 }
 
-func (suite *APITestSuite) createTestUser() *domain.User {
-	return &domain.User{
-		ID:              "test-user-id",
-		Email:           "test@example.com",
-		Username:        "testuser",
-		FullName:        "Test User",
-		Role:            domain.RoleUser,
-		IsVerified:      true,
-		IsActive:        true,
-		Skills:          []string{},
-		ExperienceYears: 0,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
-	}
-}
-
-func (suite *APITestSuite) createTestAdmin() *domain.User {
-	admin := suite.createTestUser()
-	admin.ID = "admin-user-id"
-	admin.Email = "admin@example.com"
-	admin.Username = "admin"
-	admin.FullName = "Admin User"
-	admin.Role = domain.RoleAdmin
-	return admin
-}
+// Helper user builders were removed as unused to keep suite minimal.
 
 // Standard response structure for assertions
 type TestResponse struct {
