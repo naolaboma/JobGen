@@ -1,15 +1,20 @@
 package main
 
 import (
+	"context"
 	controllers "jobgen-backend/Delivery/Controllers"
 	router "jobgen-backend/Delivery/Router"
+	domain "jobgen-backend/Domain"
 	infrastructure "jobgen-backend/Infrastructure"
 	"jobgen-backend/Infrastructure/services"
 	repositories "jobgen-backend/Repositories"
 	usecases "jobgen-backend/Usecases"
+	worker "jobgen-backend/Worker"
 	_ "jobgen-backend/docs" // This line is important for swagger
 	"log"
 	"time"
+
+	"github.com/go-redis/redis/v8"
 )
 
 // @title JobGen API
@@ -53,7 +58,6 @@ func main() {
 	passwordResetRepo := repositories.NewPasswordResetRepository(db)
 	contactRepo := repositories.NewContactRepository(db)
 	jobRepo := repositories.NewJobRepository(db)
-
 
 	// Initialize job-related services
 	jobAggregationService := services.NewJobAggregationService(jobRepo)
@@ -120,31 +124,69 @@ func main() {
 	}
 
 	// --- Initialize Infrastructure & Services ---
-	cvParserService := infrastructure.NewCVParserService()                             // New CV Parser
-	queueService := infrastructure.NewQueueService(redisClient, "cv_processing_queue") // New Queue Service
-	aiServiceClient := infrastructure.NewAIServiceClient()                             // New (Mock) AI Service Client
+	cvParserService := infrastructure.NewCVParserService() // New CV Parser
+
+	// Initialize Queue service: try Redis, fall back to in-memory if not reachable
+	var queueService infrastructure.QueueService
+	{
+		redisClient := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+		// Ping to check connectivity with a tiny timeout
+		if err := redisClient.Ping(ctxWithTimeout(2 * time.Second)).Err(); err != nil {
+			log.Printf("⚠️ Redis not available (%v). Falling back to in-memory queue.", err)
+			queueService = infrastructure.NewInMemoryQueueService(200)
+		} else {
+			queueService = infrastructure.NewQueueService(redisClient, "cv_processing_queue")
+		}
+	}
+	aiServiceClient := infrastructure.NewAIServiceClient() // Gemini AI Client
+
+	// CV storage: prefer MinIO when configured; fallback to local disk for dev
+	var cvStorage infrastructure.FileStorageService
+	var cvDomainStorage domain.FileStorageService
+	if infrastructure.Env.FileStorageURL != "" && infrastructure.Env.AccessKey != "" && infrastructure.Env.SecretKey != "" {
+		// Use the same bucket as document uploads by default
+		bucket := "documents"
+		mstore, err := infrastructure.NewMinioCVFileStorageService(
+			infrastructure.Env.FileStorageURL,
+			infrastructure.Env.AccessKey,
+			infrastructure.Env.SecretKey,
+			bucket,
+		)
+		if err != nil {
+			log.Printf("⚠️ MinIO CV storage init failed (%v). Falling back to local storage.", err)
+			local := infrastructure.NewLocalCVFileStorageService("./data/cv")
+			cvStorage = local
+			cvDomainStorage = local
+		} else {
+			cvStorage = mstore
+			cvDomainStorage = mstore
+		}
+	} else {
+		local := infrastructure.NewLocalCVFileStorageService("./data/cv")
+		cvStorage = local
+		cvDomainStorage = local
+	}
 
 	// --- Initialize Usecases ---
-	cvUsecase := usecases.NewCVUsecase(cvRepo, queueService, minioService) // New CV Usecase
+	cvUsecase := usecases.NewCVUsecase(cvRepo, queueService, cvDomainStorage) // New CV Usecase
 
 	// --- Initialize Controllers ---
 	cvController := controllers.NewCVController(cvUsecase) // New CV Controller
 
 	// --- Start Background Worker ---
-	cvProcessor := worker.NewCVProcessor(queueService, cvRepo, cvParserService, minioService, aiServiceClient)
+	cvProcessor := worker.NewCVProcessor(queueService, cvRepo, cvParserService, cvStorage, aiServiceClient)
 	go cvProcessor.Start() // Run the worker in a separate goroutine
 
-	// Setup router
+	// Setup router (match parameter order defined in router.SetupRouter)
 	router := router.SetupRouter(
 		userController,
 		authController,
 		jobController,
-    cvController
 		authMiddleware,
 		fileController,
+		cvController,
 		contactController,
 	)
-
 
 	// Start server
 	port := infrastructure.Env.Port
@@ -173,4 +215,10 @@ type ErrorInfo struct {
 	Code    string      `json:"code" example:"VALIDATION_ERROR"`
 	Message string      `json:"message" example:"Invalid input provided"`
 	Details interface{} `json:"details,omitempty"`
+}
+
+// ctxWithTimeout is a tiny helper to avoid repeating context.WithTimeout boilerplate.
+func ctxWithTimeout(d time.Duration) context.Context {
+	ctx, _ := context.WithTimeout(context.Background(), d)
+	return ctx
 }
