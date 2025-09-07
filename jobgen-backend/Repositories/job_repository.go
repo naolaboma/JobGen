@@ -110,18 +110,28 @@ func (r *JobRepository) Create(ctx context.Context, job *domain.Job) error {
 }
 
 func (r *JobRepository) GetByID(ctx context.Context, id string) (*domain.Job, error) {
-	var job domain.Job
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, domain.ErrNotFound
-	}
-	
-	filter := bson.M{"_id": objectID}
-	err = r.collection.FindOne(ctx, filter).Decode(&job)
-	if err == mongo.ErrNoDocuments {
-		return nil, domain.ErrNotFound
-	}
-	return &job, err
+    var job domain.Job
+    
+    // First try with string ID
+    filter := bson.M{"_id": id}
+    err := r.collection.FindOne(ctx, filter).Decode(&job)
+    if err == nil {
+        return &job, nil
+    }
+    
+    // If not found or error, try with ObjectID
+    objectID, err := primitive.ObjectIDFromHex(id)
+    if err != nil {
+        return nil, domain.ErrNotFound
+    }
+    
+    filter = bson.M{"_id": objectID}
+    err = r.collection.FindOne(ctx, filter).Decode(&job)
+    if err == mongo.ErrNoDocuments {
+        return nil, domain.ErrNotFound
+    }
+    
+    return &job, err
 }
 
 func (r *JobRepository) GetByApplyURL(ctx context.Context, applyURL string) (*domain.Job, error) {
@@ -135,45 +145,61 @@ func (r *JobRepository) GetByApplyURL(ctx context.Context, applyURL string) (*do
 }
 
 func (r *JobRepository) Update(ctx context.Context, job *domain.Job) error {
-	job.UpdatedAt = time.Now()
-	
-	objectID, err := primitive.ObjectIDFromHex(job.ID)
-	if err != nil {
-		return domain.ErrNotFound
-	}
-	
-	filter := bson.M{"_id": objectID}
-	update := bson.M{"$set": job}
-	
-	result, err := r.collection.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return err
-	}
-	
-	if result.MatchedCount == 0 {
-		return domain.ErrNotFound
-	}
-	
-	return nil
+    job.UpdatedAt = time.Now()
+    
+    // First try with string ID
+    filter := bson.M{"_id": job.ID}
+    update := bson.M{"$set": job}
+    
+    result, err := r.collection.UpdateOne(ctx, filter, update)
+    if err == nil && result.MatchedCount > 0 {
+        return nil
+    }
+    
+    // If not found or error, try with ObjectID
+    objectID, err := primitive.ObjectIDFromHex(job.ID)
+    if err != nil {
+        return domain.ErrNotFound
+    }
+    
+    filter = bson.M{"_id": objectID}
+    result, err = r.collection.UpdateOne(ctx, filter, update)
+    if err != nil {
+        return err
+    }
+    
+    if result.MatchedCount == 0 {
+        return domain.ErrNotFound
+    }
+    
+    return nil
 }
 
 func (r *JobRepository) Delete(ctx context.Context, id string) error {
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return domain.ErrNotFound
-	}
-	
-	filter := bson.M{"_id": objectID}
-	result, err := r.collection.DeleteOne(ctx, filter)
-	if err != nil {
-		return err
-	}
-	
-	if result.DeletedCount == 0 {
-		return domain.ErrNotFound
-	}
-	
-	return nil
+    // First try with string ID
+    filter := bson.M{"_id": id}
+    result, err := r.collection.DeleteOne(ctx, filter)
+    if err == nil && result.DeletedCount > 0 {
+        return nil
+    }
+    
+    // If not found or error, try with ObjectID
+    objectID, err := primitive.ObjectIDFromHex(id)
+    if err != nil {
+        return domain.ErrNotFound
+    }
+    
+    filter = bson.M{"_id": objectID}
+    result, err = r.collection.DeleteOne(ctx, filter)
+    if err != nil {
+        return err
+    }
+    
+    if result.DeletedCount == 0 {
+        return domain.ErrNotFound
+    }
+    
+    return nil
 }
 
 func (r *JobRepository) List(ctx context.Context, filter domain.JobFilter) ([]domain.Job, int64, error) {
