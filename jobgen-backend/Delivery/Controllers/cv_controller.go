@@ -107,6 +107,18 @@ func (ctrl *CVController) StartParsingJobFromRef(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{"message": "CV parsing job accepted.", "jobId": jobID})
 }
 
+// GetParsingJobStatusHandler retrieves the status and result of a CV parsing job
+// @Summary Get CV parsing job status
+// @Description Fetch the current status and (if finished) the parsed result of a CV parsing job.
+// @Tags CV
+// @Produce json
+// @Security BearerAuth
+// @Param jobId path string true "Parsing Job ID"
+// @Success 200 {object} map[string]interface{} "Job status and result"
+// @Failure 401 {object} controllers.StandardResponse "User not authenticated"
+// @Failure 403 {object} controllers.StandardResponse "User not authorized to view this job"
+// @Failure 404 {object} controllers.StandardResponse "Job not found"
+// @Router /cv/{jobId} [get]
 func (ctrl *CVController) GetParsingJobStatusHandler(c *gin.Context) {
 	jobID := c.Param("jobId")
 	cv, err := ctrl.cvUsecase.GetJobStatusAndResult(jobID)

@@ -1093,6 +1093,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/cv/{jobId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetch the current status and (if finished) the parsed result of a CV parsing job.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CV"
+                ],
+                "summary": "Get CV parsing job status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Parsing Job ID",
+                        "name": "jobId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Job status and result",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "User not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "User not authorized to view this job",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Job not found",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/files/profile-picture/me": {
             "get": {
                 "security": [
