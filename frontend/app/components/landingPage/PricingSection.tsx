@@ -48,13 +48,13 @@ export function PricingSection() {
     },
   ];
   return (
-    <section id="pricing" className="py-20 bg-gray-50">
+    <section id="pricing" className="py-20 bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Choose your plan
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-gray-600 dark:text-gray-300">
             Start free and upgrade as you grow your career
           </p>
         </div>
@@ -62,8 +62,10 @@ export function PricingSection() {
           {plans.map((plan, index) => (
             <div
               key={index}
-              className={`bg-white rounded-2xl p-8 shadow-lg ${
-                plan.popular ? "ring-2 ring-teal-500 relative" : ""
+              className={`bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg ${
+                plan.popular
+                  ? "ring-2 ring-[#44C3BB] dark:ring-[#44C3BB] relative"
+                  : ""
               }`}
             >
               {plan.popular && (
@@ -74,21 +76,23 @@ export function PricingSection() {
                 </div>
               )}
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                   {plan.name}
                 </h3>
                 <div className="mb-4">
-                  <span className="text-4xl font-bold text-gray-900">
+                  <span className="text-4xl font-bold text-gray-900 dark:text-gray-100">
                     {plan.price}
                   </span>
-                  <span className="text-gray-600">/{plan.period}</span>
+                  <span className="text-gray-600 dark:text-gray-300">
+                    /{plan.period}
+                  </span>
                 </div>
               </div>
               <ul className="space-y-4 mb-8">
                 {plan.features.map((feature, featureIndex) => (
                   <li key={featureIndex} className="flex items-center">
                     <svg
-                      className="w-5 h-5 text-teal-500 mr-3"
+                      className="w-5 h-5 text-[#44C3BB] mr-3"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -98,15 +102,17 @@ export function PricingSection() {
                         clipRule="evenodd"
                       />
                     </svg>
-                    <span className="text-gray-600">{feature}</span>
+                    <span className="text-gray-600 dark:text-gray-300">
+                      {feature}
+                    </span>
                   </li>
                 ))}
               </ul>
               <Button
                 className={`w-full ${
                   plan.popular
-                    ? "bg-teal-600 hover:bg-teal-700 text-white"
-                    : "bg-gray-100 hover:bg-gray-200 text-gray-900"
+                    ? "bg-[#44C3BB] hover:bg-[#3AB5AD] text-white"
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-100"
                 }`}
               >
                 {plan.cta}

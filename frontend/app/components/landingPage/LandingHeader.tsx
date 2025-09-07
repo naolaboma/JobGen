@@ -11,34 +11,41 @@ export function LandingHeader({
   setMobileMenuOpen: (open: boolean) => void;
 }) {
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+    <header className="sticky top-0 z-50 bg-gradient-to-r from-[#44C3BB] to-[#3AB5AD] dark:from-gray-900 dark:to-gray-800 text-white border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
-              <div className="w-6 h-6 bg-white rounded-lg"></div>
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+              <div className="w-6 h-6 bg-[#44C3BB] rounded-full flex items-center justify-center">
+                <div className="flex gap-1">
+                  <div className="w-1 h-1 bg-white rounded-full"></div>
+                  <div className="w-1 h-1 bg-white rounded-full"></div>
+                </div>
+              </div>
             </div>
-            <span className="text-xl font-bold text-gray-900">JobGen</span>
+            <span className="text-xl font-bold text-white dark:text-gray-100">
+              JobGen
+            </span>
           </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             <a
               href="#features"
-              className="text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
             >
               Features
             </a>
             <a
               href="#pricing"
-              className="text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
             >
               Pricing
             </a>
             <a
               href="#partners"
-              className="text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
             >
               Partners
             </a>
@@ -49,13 +56,13 @@ export function LandingHeader({
             <Link href="/login" passHref>
               <Button
                 variant="outline"
-                className="text-black border-gray-300 hover:bg-gray-50"
+                className="text-black border-gray-300 hover:bg-gray-50 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
               >
                 Sign In
               </Button>
             </Link>
             <Link href="/register" passHref>
-              <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+              <Button className="bg-[#26948C] hover:bg-[#1e7a73] text-white">
                 Get Started
               </Button>
             </Link>
@@ -72,34 +79,37 @@ export function LandingHeader({
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-100">
+          <div className="md:hidden py-4 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900">
             <div className="flex flex-col space-y-4">
               <a
                 href="#features"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
+                className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
               >
                 Features
               </a>
               <a
                 href="#pricing"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
+                className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
               >
                 Pricing
               </a>
               <a
                 href="#partners"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
+                className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
               >
                 Partners
               </a>
-              <div className="flex flex-col space-y-2 pt-4 border-t border-gray-100">
+              <div className="flex flex-col space-y-2 pt-4 border-t border-gray-100 dark:border-gray-700">
                 <Link href="/login" passHref>
-                  <Button variant="outline" className="w-full">
+                  <Button
+                    variant="outline"
+                    className="w-full dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+                  >
                     Sign In
                   </Button>
                 </Link>
                 <Link href="/register" passHref>
-                  <Button className="w-full bg-teal-600 hover:bg-teal-700">
+                  <Button className="w-full bg-[#44C3BB] hover:bg-[#3AB5AD] text-white">
                     Get Started
                   </Button>
                 </Link>

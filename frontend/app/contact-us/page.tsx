@@ -1,14 +1,14 @@
-import React from 'react';
-import ContactForm from '../components/ContactForm';
-import Navbar from '../components/NavBar';
+import React from "react";
+import ContactForm from "../components/ContactForm";
+import Navbar from "../components/NavBar";
 
-const page = () => {
+const ContactUs = () => {
   return (
     <div>
-        <Navbar />
-        <ContactForm />
+      <Navbar />
+      <ContactForm />
     </div>
-  )
-}
+  );
+};
 
-export default page
+export default ContactUs;
