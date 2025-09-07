@@ -47,7 +47,7 @@ const LandingPage = (): JSX.Element => {
             <div className="hidden md:flex items-center space-x-4">
               <Button
                 variant="outline"
-                className="text-white border-gray-300 hover:bg-gray-50"
+                className="text-black border-gray-300 hover:bg-gray-50"
               >
                 Sign In
               </Button>
