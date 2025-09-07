@@ -64,20 +64,19 @@ func SetupRouter(
 			users.DELETE("/account", userController.DeleteAccount)
 		}
 
-
 		// Job routes (public access for browsing)
 		jobs := api.Group("/jobs")
 		{
-			jobs.GET("/", jobController.GetJobs)                    // Public job browsing
-			jobs.GET("/:id", jobController.GetJobByID)              // Public job details
-			jobs.GET("/trending", jobController.GetTrendingJobs)    // Public trending jobs
-			jobs.GET("/stats", jobController.GetJobStats)          // Public job statistics
-			jobs.GET("/sources", jobController.GetJobSources)      // Public job sources
+			jobs.GET("/", jobController.GetJobs)                            // Public job browsing
+			jobs.GET("/:id", jobController.GetJobByID)                      // Public job details
+			jobs.GET("/trending", jobController.GetTrendingJobs)            // Public trending jobs
+			jobs.GET("/stats", jobController.GetJobStats)                   // Public job statistics
+			jobs.GET("/sources", jobController.GetJobSources)               // Public job sources
 			jobs.GET("/search-by-skills", jobController.SearchJobsBySkills) // Public skill-based search
-			
+
 			// Authenticated job routes (optional auth using OptionalAuth middleware)
 			jobs.GET("/search", authMiddleware.OptionalAuth(), jobController.SearchJobs) // Enhanced with user context if authenticated
-			
+
 			// Authenticated-only job routes
 			authenticated := jobs.Group("/")
 			authenticated.Use(authMiddleware.RequireAuth())
@@ -94,7 +93,7 @@ func SetupRouter(
 			admin.PUT("/users/:user_id/toggle-status", userController.ToggleUserStatus)
 			admin.DELETE("/users/:user_id", userController.DeleteUser)
 
-				// Job management
+			// Job management
 			jobAdmin := admin.Group("/jobs")
 			{
 				jobAdmin.POST("/aggregate", jobController.TriggerJobAggregation) // Trigger job scraping
@@ -138,6 +137,7 @@ func addCVRoutes(router *gin.RouterGroup, cvController *controllers.CVController
 	cvRoutes := router.Group("/cv")
 	cvRoutes.Use(authMiddleware)
 	{
+		cvRoutes.POST("/", cvController.StartParsingJobFromRef)
 		cvRoutes.POST("/parse", cvController.StartParsingJobHandler)
 		cvRoutes.GET("/parse/:jobId/status", cvController.GetParsingJobStatusHandler)
 		cvRoutes.GET("/:id", cvController.GetParsingJobStatusHandler)

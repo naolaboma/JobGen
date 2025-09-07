@@ -1,5 +1,10 @@
 basePath: /api/v1
 definitions:
+  controllers.CVFileRefRequest:
+    properties:
+      fileId:
+        type: string
+    type: object
   controllers.ChangePasswordRequest:
     properties:
       new_password:
@@ -910,6 +915,84 @@ paths:
       summary: Submit a contact form
       tags:
       - Public
+  /cv:
+    post:
+      consumes:
+      - multipart/form-data
+      - application/json
+      description: Start a parsing job by uploading a file (multipart) or providing
+        an existing fileId in JSON body.
+      parameters:
+      - description: CV PDF file
+        in: formData
+        name: file
+        type: file
+      - description: Provide when using existing fileId
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/controllers.CVFileRefRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Job accepted
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Start CV parsing job (file or reference)
+      tags:
+      - CV
+  /cv/parse:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a CV PDF via multipart and start a parsing job.
+      parameters:
+      - description: CV PDF file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Job accepted
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Start CV parsing job (multipart)
+      tags:
+      - CV
   /files/{id}:
     delete:
       consumes:

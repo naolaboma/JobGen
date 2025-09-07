@@ -107,7 +107,7 @@ func (suite *APITestSuite) TestLogin() {
 		response := suite.parseResponse(w)
 		suite.True(response.Success)
 		suite.Contains(response.Message, "Login successful")
-		
+
 		// Check if refresh token cookie is set
 		cookies := w.Result().Cookies()
 		var refreshTokenCookie *http.Cookie
@@ -305,14 +305,14 @@ func (suite *APITestSuite) TestRequestPasswordReset() {
 			Email: "test@example.com",
 		}
 
-		suite.userUsecase.On("RequestPasswordReset", mock.Anything, "test@example.com").Return("reset-token", nil)
+		suite.userUsecase.On("RequestPasswordResetOTP", mock.Anything, "test@example.com").Return(nil)
 
 		w := suite.makeRequest("POST", "/api/v1/auth/forgot-password", reqBody, nil)
 
 		suite.Equal(http.StatusOK, w.Code)
 		response := suite.parseResponse(w)
 		suite.True(response.Success)
-		suite.Contains(response.Message, "reset link has been sent")
+		suite.Contains(response.Message, "OTP sent")
 	})
 
 	suite.Run("password reset request with non-existent email", func() {
@@ -320,7 +320,7 @@ func (suite *APITestSuite) TestRequestPasswordReset() {
 			Email: "nonexistent@example.com",
 		}
 
-		suite.userUsecase.On("RequestPasswordReset", mock.Anything, "nonexistent@example.com").Return("", domain.ErrUserNotFound)
+		suite.userUsecase.On("RequestPasswordResetOTP", mock.Anything, "nonexistent@example.com").Return(domain.ErrUserNotFound)
 
 		w := suite.makeRequest("POST", "/api/v1/auth/forgot-password", reqBody, nil)
 
@@ -422,17 +422,18 @@ func (suite *APITestSuite) TestChangePassword() {
 func (suite *APITestSuite) TestResendOTP() {
 	suite.Run("successful OTP resend", func() {
 		reqBody := controllers.ResendOTPRequest{
-			Email: "test@example.com",
+			Email:   "test@example.com",
+			Purpose: "EMAIL_VERIFICATION",
 		}
 
-		suite.userUsecase.On("ResendOTP", mock.Anything, "test@example.com").Return(nil)
+		suite.userUsecase.On("ResendOTP", mock.Anything, "test@example.com", domain.OTPPurpose("EMAIL_VERIFICATION")).Return(nil)
 
 		w := suite.makeRequest("POST", "/api/v1/auth/resend-otp", reqBody, nil)
 
 		suite.Equal(http.StatusOK, w.Code)
 		response := suite.parseResponse(w)
 		suite.True(response.Success)
-		suite.Contains(response.Message, "Verification code resent")
+		suite.Contains(response.Message, "OTP resent successfully")
 	})
 
 	// todo check this test
