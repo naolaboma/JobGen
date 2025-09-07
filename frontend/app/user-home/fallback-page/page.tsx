@@ -2,7 +2,7 @@
 
 import { useDispatch, useSelector } from "react-redux";
 import { useFetchJobsQuery } from "@/lib/redux/api/JobApi";
-import JobCard from "@/app/components/JobCard";
+import JobSummaryCard from "@/app/components/JobSummaryCard";
 import SearchBar from "@/app/components/SearchBar";
 import Filters from "@/app/components/Filters";
 import Pagination from "@/app/components/Pagination";
@@ -10,7 +10,7 @@ import Link from "next/link";
 import { setFilters, setPage, setSort } from "@/lib/redux/slices/jobSlice";
 import { RootState } from "@/store/store";
 
-export default function FallbackPage() {
+export default function Page() {
   const dispatch = useDispatch();
   const filters = useSelector((state: RootState) => state.job);
 
@@ -126,13 +126,32 @@ export default function FallbackPage() {
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {jobs.map((job) => (
-              <JobCard
-                key={job.id}
-                {...job}
-                percentage={Math.floor(Math.random() * 100)} // placeholder
-              />
-            ))}
+            {jobs.map((job: any) => {
+              const id = job.id ?? job.job_id ?? job._id ?? job.uuid;
+              const title = job.title ?? job.job_title ?? "Untitled role";
+              const location = job.location ?? job.work_location ?? "Remote";
+              const jobType =
+                job.job_type ??
+                job.type ??
+                job.employment_type ??
+                job.tags?.find((t: string) =>
+                  /full|part|contract|intern/i.test(t)
+                ) ??
+                "N/A";
+              const company =
+                job.company ?? job.company_name ?? job.organization;
+
+              return (
+                <JobSummaryCard
+                  key={id}
+                  id={String(id)}
+                  title={title}
+                  location={location}
+                  jobType={jobType}
+                  company={company}
+                />
+              );
+            })}
           </div>
         )}
 
