@@ -24,16 +24,16 @@ func SetupRouter(
 	r := gin.Default()
 	
 	// todo change the cors policy later on
-	// CORS setup (allow any origin + any port for now)
 	// CORS setup - allow all origins, methods, headers (development)
 	r.Use(cors.New(cors.Config{
-		AllowAllOrigins:  true,
+		AllowAllOrigins:  true, // allow everything
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Authorization", "Content-Type"},
 		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
+		AllowCredentials: false, //  must be false when AllowAllOrigins = true
 		MaxAge: 12 * time.Hour,
 	}))
+
 
 
 	// Swagger docs
