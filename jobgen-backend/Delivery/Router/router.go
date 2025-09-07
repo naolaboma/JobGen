@@ -25,16 +25,8 @@ func SetupRouter(
 	
 	// todo change the cors policy later on
 	// CORS setup - allow all origins, methods, headers (development)
-	r.Use(cors.New(cors.Config{
-		AllowAllOrigins:  true, // allow everything
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Authorization", "Content-Type"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: false, //  must be false when AllowAllOrigins = true
-		MaxAge: 12 * time.Hour,
-	}))
-
-
+	// Development CORS: allow all origins (domains + ports). DO NOT use credentials with AllowAllOrigins.
+	r.Use(cors.Default())
 
 	// Swagger docs
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -68,6 +60,7 @@ func SetupRouter(
 		// Job routes (public access for browsing)
 		jobs := api.Group("/jobs")
 		{
+			jobs.GET("", jobController.GetJobs) 
 			jobs.GET("/", jobController.GetJobs)                            // Public job browsing
 			jobs.GET("/:id", jobController.GetJobByID)                      // Public job details
 			jobs.GET("/trending", jobController.GetTrendingJobs)            // Public trending jobs

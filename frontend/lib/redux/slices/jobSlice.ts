@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 interface JobQueryParams {
   page?: number;
@@ -9,22 +9,22 @@ interface JobQueryParams {
   sponsorship?: boolean;
   source?: string;
   sort_by?: string;
-  sort_order?: 'asc' | 'desc';
+  sort_order?: "asc" | "desc";
 }
 
 const initialState: JobQueryParams = {
   page: 1,
-  limit: 10,
-  query: '',
-  skills: '',
-  location: '',
+  limit: 2,
+  query: "",
+  skills: "",
+  location: "",
   sponsorship: undefined,
-  sort_by: 'posted_at',
-  sort_order: 'desc',
+  sort_by: "posted_at",
+  sort_order: "desc",
 };
 
 const jobSlice = createSlice({
-  name: 'job',
+  name: "job",
   initialState,
   reducers: {
     setFilters: (state, action: PayloadAction<Partial<JobQueryParams>>) => {
@@ -33,7 +33,10 @@ const jobSlice = createSlice({
     setPage: (state, action: PayloadAction<number>) => {
       state.page = action.payload;
     },
-    setSort: (state, action: PayloadAction<{ sort_by: string; sort_order: 'asc' | 'desc' }>) => {
+    setSort: (
+      state,
+      action: PayloadAction<{ sort_by: string; sort_order: "asc" | "desc" }>
+    ) => {
       state.sort_by = action.payload.sort_by;
       state.sort_order = action.payload.sort_order;
     },
