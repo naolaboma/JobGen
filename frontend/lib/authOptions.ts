@@ -1,20 +1,64 @@
-import type { NextAuthOptions } from "next-auth";
+import type { NextAuthOptions, User } from "next-auth";
+import { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
+
+// Helper function to parse JWT
+const parseJwt = (token: string) => {
+    try {
+        return JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    } catch (e) {
+        return null;
+    }
+};
+
+// This function handles refreshing the access token
+async function refreshAccessToken(token: JWT): Promise<JWT> {
+    try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/refresh`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh_token: token.refreshToken }),
+        });
+
+        const refreshedData = await res.json();
+
+        if (!res.ok) {
+            throw refreshedData;
+        }
+
+        const newAccessToken = refreshedData.data.access_token;
+        const newRefreshToken = refreshedData.data.refresh_token || token.refreshToken; 
+        const newAccessTokenExpires = parseJwt(newAccessToken).exp * 1000;
+
+        return {
+            ...token,
+            accessToken: newAccessToken,
+            accessTokenExpires: newAccessTokenExpires,
+            refreshToken: newRefreshToken,
+        };
+    } catch (error) {
+        console.error("RefreshAccessTokenError", error);
+        return {
+            ...token,
+            error: "RefreshAccessTokenError",
+        };
+    }
+}
 
 export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
-            name: "Credentials", // Consistent naming
+            name: "Credentials",
             credentials: {
                 email: { label: "Email", type: "email" },
                 password: { label: "Password", type: "password" },
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials.password) {
-                    throw new Error("Please enter an email and password."); // More specific error
+                    throw new Error("Please enter an email and password.");
                 }
 
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, { // Use NEXT_PUBLIC_API_URL
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -25,21 +69,25 @@ export const authOptions: NextAuthOptions = {
 
                 if (!res.ok) {
                     const errorData = await res.json().catch(() => ({ message: "Invalid credentials" }));
-                    throw new Error(errorData.message || "Invalid credentials"); // Robust error handling
+                    throw new Error(errorData.message || "Invalid credentials");
                 }
 
                 const backendResponse = await res.json();
-                const user = backendResponse.data; // Assuming 'data' contains the user object
+                
+                const user = backendResponse.data; 
+                const accessToken = backendResponse.data.access_token;
+                const refreshToken = backendResponse.data.refresh_token;
 
-                if (user) {
-                    // Harmonize user object for NextAuth
+                if (user && accessToken && refreshToken) {
+                    const accessTokenExpires = parseJwt(accessToken).exp * 1000;
                     return {
                         id: user.id,
-                        name: user.full_name || user.username || '', // Use full_name or username for name, default to empty string
+                        name: user.full_name || user.username || '',
                         email: user.email,
-                        accessToken: backendResponse.access_token, // Assuming tokens are directly in backendResponse
-                        refreshToken: backendResponse.refresh_token,
-                    };
+                        accessToken,
+                        refreshToken,
+                        accessTokenExpires,
+                    } as User & { accessToken: string; refreshToken: string; accessTokenExpires: number };
                 }
 
                 return null;
@@ -50,26 +98,39 @@ export const authOptions: NextAuthOptions = {
         strategy: "jwt",
     },
     callbacks: {
-        async jwt({ token, user }) {
-            if (user) {
-                token.id = user.id;
-                token.accessToken = user.accessToken;
-                token.refreshToken = user.refreshToken;
+        async jwt({ token, user, account }) {
+            // Initial sign in
+            if (account && user) {
+                return {
+                    ...token,
+                    id: user.id,
+                    accessToken: (user as any).accessToken,
+                    refreshToken: (user as any).refreshToken,
+                    accessTokenExpires: (user as any).accessTokenExpires,
+                };
             }
-            return token;
+
+            // Return previous token if the access token has not expired yet
+            if (Date.now() < (token.accessTokenExpires as number)) {
+                return token;
+            }
+
+            // Access token has expired, try to update it
+            return refreshAccessToken(token);
         },
         async session({ session, token }) {
             if (session.user) {
                 session.user.id = token.id as string;
             }
-            (session as any).accessToken = token.accessToken; // Ensure accessToken is on session
-            (session as any).refreshToken = token.refreshToken; // Ensure refreshToken is on session
+            (session as any).accessToken = token.accessToken;
+            (session as any).error = token.error; // Propagate error to the client
+
             return session;
         },
     },
     pages: {
-        signIn: '/login', // Consistent with file structure
-        error: '/login', // Add error page for consistency
+        signIn: '/login',
+        error: '/login',
     },
-    secret: process.env.NEXTAUTH_SECRET, // Add secret
+    secret: process.env.NEXTAUTH_SECRET,
 };

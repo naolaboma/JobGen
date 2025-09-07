@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { signIn } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { epilogue, inter, poppins } from '../layout';
+import { Epilogue, Inter, Poppins } from 'next/font/google';
+
+const epilogue = Epilogue({ subsets: ['latin'], weight: ['400', '700'] });
+const inter = Inter({ subsets: ['latin'], weight: ['400', '700'] });
+const poppins = Poppins({ subsets: ['latin'], weight: ['400', '700'] });
 
 type FormValues = {
     fullName: string;
@@ -22,7 +26,7 @@ export default function SignUpForm() {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
-    const callbackUrl = searchParams.get("callbackUrl") || "/opportunities/search";
+    const callbackUrl = searchParams.get("callbackUrl") || "/chat";
 
     const onSubmit = async (data: FormValues) => {
         setServerError("");
@@ -46,7 +50,7 @@ export default function SignUpForm() {
             if (!res.ok) {
                 setServerError(result.message || "Signup failed");
             } else {
-                router.push(`/login`);
+                router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
             }
         } catch (err) {
             console.error("Signup error:", err);

@@ -38,7 +38,7 @@ export default function Navbar() {
             <a href="#" className="hover:text-gray-200 transition-colors">
               About
             </a>
-            <a href="#" className="hover:text-gray-200 transition-colors">
+                        <a href="/contact-us" className="hover:text-gray-200 transition-colors">
               Contact
             </a>
             <div className="w-8 h-8 rounded-full overflow-hidden cursor-pointer">
@@ -83,8 +83,8 @@ export default function Navbar() {
               >
                 About
               </a>
-              <a
-                href="#"
+                            <a
+                href="/contact-us"
                 onClick={closeMobileMenu}
                 className="hover:text-gray-200 transition-colors"
               >
