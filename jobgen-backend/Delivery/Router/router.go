@@ -21,10 +21,17 @@ func SetupRouter(
 
 ) *gin.Engine {
 	r := gin.Default()
-
-	// CORS setup (production: restrict origins)
+	
+	// todo change the cors policy later on
+	// CORS setup (allow any origin + any port for now)
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := c.Request.Header.Get("Origin")
+		if origin != "" {
+			// echo back whatever origin the request comes from
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		} else {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -34,6 +41,7 @@ func SetupRouter(
 		}
 		c.Next()
 	})
+
 
 	// Swagger docs
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

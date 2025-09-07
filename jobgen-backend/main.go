@@ -120,7 +120,7 @@ func main() {
 	// --- Initialize Repositories ---
 	cvRepo, err := repositories.NewCVRepository(db) // New CV Repo
 	if err != nil {
-		log.Fatalf("🔴 Could not create CV Repository: %v", err)
+		log.Fatalf("Could not create CV Repository: %v", err)
 	}
 
 	// --- Initialize Infrastructure & Services ---
