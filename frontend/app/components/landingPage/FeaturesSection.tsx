@@ -40,13 +40,13 @@ export function FeaturesSection() {
     },
   ];
   return (
-    <section id="features" className="py-20 bg-white">
+    <section id="features" className="py-20 bg-white dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Everything you need to succeed
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
             Our AI-powered platform provides comprehensive tools to optimize
             your job search and land your dream role.
           </p>
@@ -55,13 +55,15 @@ export function FeaturesSection() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="bg-gray-50 rounded-xl p-6 hover:shadow-lg transition-shadow"
+              className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 hover:shadow-lg transition-shadow"
             >
               <div className="text-4xl mb-4">{feature.icon}</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
                 {feature.title}
               </h3>
-              <p className="text-gray-600">{feature.description}</p>
+              <p className="text-gray-600 dark:text-gray-300">
+                {feature.description}
+              </p>
             </div>
           ))}
         </div>
