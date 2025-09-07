@@ -22,19 +22,24 @@ func SetupRouter(
 
 ) *gin.Engine {
 	r := gin.Default()
-	
-	// todo change the cors policy later on
+
+	// Prevent automatic trailing slash redirects (fix 307 for POST)
+	r.RedirectTrailingSlash = false
+
 	// CORS setup - allow all origins, methods, headers (development)
 	r.Use(cors.New(cors.Config{
 		AllowAllOrigins:  true, // allow everything
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Authorization", "Content-Type"},
 		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: false, //  must be false when AllowAllOrigins = true
-		MaxAge: 12 * time.Hour,
+		AllowCredentials: false, // must be false when AllowAllOrigins = true
+		MaxAge:           12 * time.Hour,
 	}))
 
-
+	// Respond to preflight OPTIONS requests
+	r.OPTIONS("/*cors", func(c *gin.Context) {
+		c.AbortWithStatus(204)
+	})
 
 	// Swagger docs
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -42,7 +47,7 @@ func SetupRouter(
 	api := r.Group("/api/v1")
 	{
 		// Public routes
-		api.POST("/contact", contactController.SubmitContactForm) // New: Contact Form Submission
+		api.POST("/contact", contactController.SubmitContactForm)
 
 		auth := api.Group("/auth")
 		{
@@ -65,24 +70,22 @@ func SetupRouter(
 			users.DELETE("/account", userController.DeleteAccount)
 		}
 
-		// Job routes (public access for browsing)
+		// Job routes
 		jobs := api.Group("/jobs")
 		{
-			jobs.GET("/", jobController.GetJobs)                            // Public job browsing
-			jobs.GET("/:id", jobController.GetJobByID)                      // Public job details
-			jobs.GET("/trending", jobController.GetTrendingJobs)            // Public trending jobs
-			jobs.GET("/stats", jobController.GetJobStats)                   // Public job statistics
-			jobs.GET("/sources", jobController.GetJobSources)               // Public job sources
-			jobs.GET("/search-by-skills", jobController.SearchJobsBySkills) // Public skill-based search
+			jobs.GET("", jobController.GetJobs)
+			jobs.GET("/", jobController.GetJobs)
+			jobs.GET("/:id", jobController.GetJobByID)
+			jobs.GET("/trending", jobController.GetTrendingJobs)
+			jobs.GET("/stats", jobController.GetJobStats)
+			jobs.GET("/sources", jobController.GetJobSources)
+			jobs.GET("/search-by-skills", jobController.SearchJobsBySkills)
+			jobs.GET("/search", authMiddleware.OptionalAuth(), jobController.SearchJobs)
 
-			// Authenticated job routes (optional auth using OptionalAuth middleware)
-			jobs.GET("/search", authMiddleware.OptionalAuth(), jobController.SearchJobs) // Enhanced with user context if authenticated
-
-			// Authenticated-only job routes
 			authenticated := jobs.Group("/")
 			authenticated.Use(authMiddleware.RequireAuth())
 			{
-				authenticated.GET("/matched", jobController.GetMatchedJobs) // Personalized job matching
+				authenticated.GET("/matched", jobController.GetMatchedJobs)
 			}
 		}
 
@@ -94,13 +97,12 @@ func SetupRouter(
 			admin.PUT("/users/:user_id/toggle-status", userController.ToggleUserStatus)
 			admin.DELETE("/users/:user_id", userController.DeleteUser)
 
-			// Job management
 			jobAdmin := admin.Group("/jobs")
 			{
-				jobAdmin.POST("/aggregate", jobController.TriggerJobAggregation) // Trigger job scraping
-				jobAdmin.POST("/", jobController.CreateJob)                      // Create job
-				jobAdmin.PUT("/:id", jobController.UpdateJob)                    // Update job
-				jobAdmin.DELETE("/:id", jobController.DeleteJob)                 // Delete job
+				jobAdmin.POST("/aggregate", jobController.TriggerJobAggregation)
+				jobAdmin.POST("/", jobController.CreateJob)
+				jobAdmin.PUT("/:id", jobController.UpdateJob)
+				jobAdmin.DELETE("/:id", jobController.DeleteJob)
 			}
 		}
 
@@ -115,7 +117,15 @@ func SetupRouter(
 			files.DELETE("/:id", fileController.DeleteFile)
 		}
 
-		addCVRoutes(api, cvController, authMiddleware.RequireAuth())
+		// CV routes (updated to match Users/Files style)
+		cv := api.Group("/cv")
+		cv.Use(authMiddleware.RequireAuth())
+		{
+			cv.POST("/", cvController.StartParsingJobFromRef)
+			cv.POST("/parse", cvController.StartParsingJobHandler)
+			cv.GET("/parse/:jobId/status", cvController.GetParsingJobStatusHandler)
+			cv.GET("/:id", cvController.GetParsingJobStatusHandler)
+		}
 	}
 
 	// Health check
@@ -132,15 +142,4 @@ func SetupRouter(
 	})
 
 	return r
-}
-
-func addCVRoutes(router *gin.RouterGroup, cvController *controllers.CVController, authMiddleware gin.HandlerFunc) {
-	cvRoutes := router.Group("/cv")
-	cvRoutes.Use(authMiddleware)
-	{
-		cvRoutes.POST("/", cvController.StartParsingJobFromRef)
-		cvRoutes.POST("/parse", cvController.StartParsingJobHandler)
-		cvRoutes.GET("/parse/:jobId/status", cvController.GetParsingJobStatusHandler)
-		cvRoutes.GET("/:id", cvController.GetParsingJobStatusHandler)
-	}
 }
