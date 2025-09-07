@@ -15,7 +15,9 @@ export default function FallbackPage() {
   const filters = useSelector((state: RootState) => state.job);
 
   const { data, isLoading, error } = useFetchJobsQuery(filters);
-  const totalPages = data ? Math.ceil(data.length / (filters.limit ?? 10)) : 1;
+
+  const jobs = data?.data?.items ?? [];
+  const totalPages = data?.data?.total_pages ?? 1;
 
   const handleSearch = (query: string) => {
     dispatch(setFilters({ query }));
@@ -43,69 +45,106 @@ export default function FallbackPage() {
     dispatch(setPage(newPage));
   };
 
-  if (isLoading) return <div className="text-center py-10">Loading...</div>;
+  if (isLoading)
+    return (
+      <div className="text-center py-20 text-lg font-medium">
+        Loading jobs...
+      </div>
+    );
+
   if (error) {
     const errorMessage =
       "error" in error ? error.error : "Unknown error occurred";
     return (
-      <div className="text-center py-10 text-red-600">
+      <div className="text-center py-20 text-red-600 text-lg">
         Error: {errorMessage}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white p-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900">Job Listings</h1>
-      <p className="mb-6 text-gray-700">
-        Set up your profile for personalized recommendations!{" "}
-        <Link href="/profile-setup" className="text-[#7BBFB3] hover:underline">
-          Set Up Profile
-        </Link>
-      </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Sticky Top Header */}
+      <div className="sticky top-0 z-10 bg-white shadow-sm px-6 py-4 border-b">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Job Listings</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Set up your profile for personalized recommendations!{" "}
+              <Link
+                href="/profile-setup"
+                className="text-[#7BBFB3] font-medium hover:underline"
+              >
+                Set Up Profile
+              </Link>
+            </p>
+          </div>
 
-      <SearchBar onSearch={handleSearch} initialQuery={filters.query ?? ""} />
-      <Filters
-        onFilterChange={handleFilterChange}
-        initialSkills={filters.skills ?? ""}
-        initialLocation={filters.location ?? ""}
-        initialSponsorship={filters.sponsorship}
-      />
-      <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-        <select
-          name="sort_by"
-          value={filters.sort_by ?? "posted_at"}
-          onChange={handleSortChange}
-          className="p-2 border rounded-md mr-2"
-        >
-          <option value="posted_at">Posted Date</option>
-          <option value="title">Title</option>
-        </select>
-        <select
-          name="sort_order"
-          value={filters.sort_order ?? "desc"}
-          onChange={handleSortChange}
-          className="p-2 border rounded-md"
-        >
-          <option value="desc">Descending</option>
-          <option value="asc">Ascending</option>
-        </select>
-      </div>
+          {/* Sorting Controls */}
+          <div className="flex gap-2">
+            <select
+              name="sort_by"
+              value={filters.sort_by ?? "posted_at"}
+              onChange={handleSortChange}
+              className="p-2 border rounded-md shadow-sm bg-white text-sm"
+            >
+              <option value="posted_at">Posted Date</option>
+              <option value="title">Title</option>
+            </select>
+            <select
+              name="sort_order"
+              value={filters.sort_order ?? "desc"}
+              onChange={handleSortChange}
+              className="p-2 border rounded-md shadow-sm bg-white text-sm"
+            >
+              <option value="desc">Descending</option>
+              <option value="asc">Ascending</option>
+            </select>
+          </div>
+        </div>
 
-      <div className="grid gap-6">
-        {data?.map((job) => (
-          <JobCard
-            key={job.id}
-            {...job}
-            percentage={Math.floor(Math.random() * 100)} // Placeholder
+        {/* Search + Filters Row */}
+        <div className="mt-4 flex flex-col md:flex-row md:items-center gap-4">
+          <SearchBar
+            onSearch={handleSearch}
+            initialQuery={filters.query ?? ""}
           />
-        ))}
+          <Filters
+            onFilterChange={handleFilterChange}
+            initialSkills={filters.skills ?? ""}
+            initialLocation={filters.location ?? ""}
+            initialSponsorship={filters.sponsorship}
+          />
+        </div>
       </div>
-      <Pagination
-        currentPage={filters.page ?? 1}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-      />
+
+      {/* Job Listings */}
+      <div className="p-6">
+        {jobs.length === 0 ? (
+          <div className="text-center py-20 text-gray-600 text-lg">
+            No jobs found. Try adjusting filters.
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {jobs.map((job) => (
+              <JobCard
+                key={job.id}
+                {...job}
+                percentage={Math.floor(Math.random() * 100)} // placeholder
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        <div className="mt-10 flex justify-center">
+          <Pagination
+            currentPage={filters.page ?? 1}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        </div>
+      </div>
     </div>
   );
 }
