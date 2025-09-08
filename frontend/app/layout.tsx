@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "next-themes";
 import { ReduxProvider } from "@/store/Provider";
 import NextAuthSessionProvider from "./components/NextAuthSessionProvider"; // Import the new provider
 
@@ -15,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JobGen App", // Re-add global metadata
-  description: "AI-Powered Remote Job Finder & CV Optimizer",
+  title: "Job Gen Application",
+  description: "Job Gen Application",
 };
 
 export default function RootLayout({
@@ -25,14 +26,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <NextAuthSessionProvider>
-          <ReduxProvider>{children}</ReduxProvider>
+          <ReduxProvider>
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+              {children}
+            </ThemeProvider>
+          </ReduxProvider>
         </NextAuthSessionProvider>
-      </body>
-    </html>
+      </body >
+    </html >
   );
 }

@@ -94,6 +94,17 @@ func main() {
 		contextTimeout,
 	)
 
+	// Initialize AI Service for chatbot
+	aiService, err := infrastructure.NewAIService()
+	if err != nil {
+		log.Fatalf("Failed to initialize AI service: %v", err)
+	}
+
+	// Initialize Chat components
+	chatRepo := repositories.NewChatRepository(db)
+	chatUsecase := usecases.NewChatUsecase(chatRepo, aiService)
+	chatController := controllers.NewChatController(chatUsecase)
+
 	// Initialize controllers
 	userController := controllers.NewUserController(userUsecase)
 	authController := controllers.NewAuthController(authUsecase)
@@ -186,6 +197,7 @@ func main() {
 		fileController,
 		cvController,
 		contactController,
+		chatController,
 	)
 
 	// Start server
@@ -197,6 +209,7 @@ func main() {
 	log.Printf("Starting JobGen API server on port %s", port)
 	log.Printf("Environment: %s", infrastructure.Env.Environment)
 	log.Printf("Swagger documentation available at: http://localhost:%s/swagger/index.html", port)
+	log.Printf("AI Chatbot endpoints available at: /api/v1/chat/*")
 
 	if err := router.Run(":" + port); err != nil {
 		log.Fatal("Failed to start server:", err)

@@ -921,6 +921,201 @@
                 }
             }
         },
+        "/chat/message": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Send a message to the AI career assistant and receive a response",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AI Chat"
+                ],
+                "summary": "Send a message to the AI chatbot",
+                "parameters": [
+                    {
+                        "description": "Chat message",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.ChatRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message sent successfully",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chat/session/{session_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve the message history for a specific chat session",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AI Chat"
+                ],
+                "summary": "Get chat session history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "History retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a specific chat session and all its messages",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AI Chat"
+                ],
+                "summary": "Delete a chat session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chat/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a list of the user's chat sessions",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AI Chat"
+                ],
+                "summary": "Get user's chat sessions",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Number of results to return (default 10)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of results to skip (default 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sessions retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.StandardResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/contact": {
             "post": {
                 "description": "Allows users to submit general inquiries or feedback",
@@ -2390,6 +2585,85 @@
                 }
             }
         },
+        "domain.CV": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "educations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Education"
+                    }
+                },
+                "experiences": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Experience"
+                    }
+                },
+                "fileName": {
+                    "type": "string"
+                },
+                "fileStorageId": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "processingError": {
+                    "type": "string"
+                },
+                "profileSummary": {
+                    "type": "string"
+                },
+                "rawText": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "integer"
+                },
+                "skills": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "$ref": "#/definitions/domain.JobStatus"
+                },
+                "suggestions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Suggestion"
+                    }
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ChatRequest": {
+            "type": "object",
+            "required": [
+                "message"
+            ],
+            "properties": {
+                "cv_data": {
+                    "$ref": "#/definitions/domain.CV"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.ContactFormRequest": {
             "type": "object",
             "required": [
@@ -2418,6 +2692,67 @@
                     "minLength": 3
                 }
             }
+        },
+        "domain.Education": {
+            "type": "object",
+            "properties": {
+                "degree": {
+                    "type": "string"
+                },
+                "graduationDate": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "institution": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.Experience": {
+            "type": "object",
+            "properties": {
+                "company": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "endDate": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "startDate": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.JobStatus": {
+            "type": "string",
+            "enum": [
+                "Pending",
+                "Processing",
+                "Completed",
+                "Failed"
+            ],
+            "x-enum-varnames": [
+                "StatusPending",
+                "StatusProcessing",
+                "StatusCompleted",
+                "StatusFailed"
+            ]
         },
         "domain.JobType": {
             "type": "string",
@@ -2452,6 +2787,23 @@
                 "RoleUser",
                 "RoleAdmin"
             ]
+        },
+        "domain.Suggestion": {
+            "type": "object",
+            "properties": {
+                "applied": {
+                    "type": "boolean"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
         }
     },
     "securityDefinitions": {

@@ -239,6 +239,58 @@ definitions:
     - email
     - otp
     type: object
+  domain.CV:
+    properties:
+      createdAt:
+        type: string
+      educations:
+        items:
+          $ref: '#/definitions/domain.Education'
+        type: array
+      experiences:
+        items:
+          $ref: '#/definitions/domain.Experience'
+        type: array
+      fileName:
+        type: string
+      fileStorageId:
+        type: string
+      id:
+        type: string
+      processingError:
+        type: string
+      profileSummary:
+        type: string
+      rawText:
+        type: string
+      score:
+        type: integer
+      skills:
+        items:
+          type: string
+        type: array
+      status:
+        $ref: '#/definitions/domain.JobStatus'
+      suggestions:
+        items:
+          $ref: '#/definitions/domain.Suggestion'
+        type: array
+      updatedAt:
+        type: string
+      userId:
+        type: string
+    type: object
+  domain.ChatRequest:
+    properties:
+      cv_data:
+        $ref: '#/definitions/domain.CV'
+      message:
+        type: string
+      session_id:
+        type: string
+    required:
+    - message
+    type: object
   domain.ContactFormRequest:
     properties:
       email:
@@ -261,6 +313,48 @@ definitions:
     - name
     - subject
     type: object
+  domain.Education:
+    properties:
+      degree:
+        type: string
+      graduationDate:
+        type: string
+      id:
+        type: string
+      institution:
+        type: string
+      location:
+        type: string
+    type: object
+  domain.Experience:
+    properties:
+      company:
+        type: string
+      description:
+        type: string
+      endDate:
+        type: string
+      id:
+        type: string
+      location:
+        type: string
+      startDate:
+        type: string
+      title:
+        type: string
+    type: object
+  domain.JobStatus:
+    enum:
+    - Pending
+    - Processing
+    - Completed
+    - Failed
+    type: string
+    x-enum-varnames:
+    - StatusPending
+    - StatusProcessing
+    - StatusCompleted
+    - StatusFailed
   domain.JobType:
     enum:
     - full-time
@@ -289,6 +383,17 @@ definitions:
     x-enum-varnames:
     - RoleUser
     - RoleAdmin
+  domain.Suggestion:
+    properties:
+      applied:
+        type: boolean
+      content:
+        type: string
+      id:
+        type: string
+      type:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -885,6 +990,129 @@ paths:
       summary: Verify email address
       tags:
       - Authentication
+  /chat/message:
+    post:
+      consumes:
+      - application/json
+      description: Send a message to the AI career assistant and receive a response
+      parameters:
+      - description: Chat message
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ChatRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message sent successfully
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Send a message to the AI chatbot
+      tags:
+      - AI Chat
+  /chat/session/{session_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific chat session and all its messages
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Session deleted successfully
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a chat session
+      tags:
+      - AI Chat
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the message history for a specific chat session
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: History retrieved successfully
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Get chat session history
+      tags:
+      - AI Chat
+  /chat/sessions:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of the user's chat sessions
+      parameters:
+      - description: Number of results to return (default 10)
+        in: query
+        name: limit
+        type: integer
+      - description: Number of results to skip (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sessions retrieved successfully
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user's chat sessions
+      tags:
+      - AI Chat
   /contact:
     post:
       consumes:

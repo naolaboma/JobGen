@@ -1,6 +1,8 @@
 import type { NextAuthOptions, User } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+import GitHubProvider from "next-auth/providers/github";
 
 // Helper function to parse JWT
 const parseJwt = (token: string) => {
@@ -47,6 +49,14 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 
 export const authOptions: NextAuthOptions = {
     providers: [
+        GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID as string,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+        }),
+        GitHubProvider({
+            clientId: process.env.GITHUB_CLIENT_ID as string,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+        }),
         CredentialsProvider({
             name: "Credentials",
             credentials: {
