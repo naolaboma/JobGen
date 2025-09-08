@@ -74,20 +74,28 @@ export const authOptions: NextAuthOptions = {
 
                 const backendResponse = await res.json();
                 
-                const user = backendResponse.data; 
-                const accessToken = backendResponse.data.access_token;
-                const refreshToken = backendResponse.data.refresh_token;
+                const accessToken = backendResponse.data.access_token; // Access token is nested under 'data'
 
-                if (user && accessToken && refreshToken) {
-                    const accessTokenExpires = parseJwt(accessToken).exp * 1000;
+                if (accessToken) {
+                    const accessTokenPayload = parseJwt(accessToken);
+                    const accessTokenExpires = accessTokenPayload.exp * 1000;
+
+                    // Construct a minimal user object from available information
+                    // Assuming email is unique and can serve as an ID for NextAuth.js
+                    const user: User = {
+                        id: credentials.email, // Using email as ID, as no user ID is returned
+                        email: credentials.email,
+                        name: credentials.email, // Using email as name, as no full name is returned
+                    };
+
                     return {
-                        id: user.id,
-                        name: user.full_name || user.username || '',
-                        email: user.email,
-                        accessToken,
-                        refreshToken,
-                        accessTokenExpires,
-                    } as User & { accessToken: string; refreshToken: string; accessTokenExpires: number };
+                        ...user,
+                        accessToken: accessToken,
+                        // refreshToken cannot be accessed from http-only cookie,
+                        // so session renewal will not work.
+                        refreshToken: undefined, // Explicitly set to undefined
+                        accessTokenExpires: accessTokenExpires,
+                    } as User & { accessToken: string; refreshToken?: string; accessTokenExpires: number };
                 }
 
                 return null;

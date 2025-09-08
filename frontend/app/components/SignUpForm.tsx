@@ -50,7 +50,7 @@ export default function SignUpForm() {
             if (!res.ok) {
                 setServerError(result.message || "Signup failed");
             } else {
-                router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
+                router.push(callbackUrl); // Redirect directly to chat or callbackUrl
             }
         } catch (err) {
             console.error("Signup error:", err);

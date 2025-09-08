@@ -97,7 +97,7 @@ export default function ChatBot() {
         formData.append("file", file);
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cv/parse`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/cv/parse`, {
                 method: "POST",
                 headers: { "Authorization": `Bearer ${(session as any).accessToken}` },
                 body: formData,
@@ -124,7 +124,7 @@ export default function ChatBot() {
         if (!session) return;
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs/matched`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/matched`, {
                 headers: {
                     "Authorization": `Bearer ${(session as any).accessToken}`,
                 },
