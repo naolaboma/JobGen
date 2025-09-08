@@ -1,7 +1,6 @@
-// app/components/JobCard.tsx
 "use client";
 
-import { FC } from "react";
+import { FC, useState } from "react";
 import { MapPin, Building2, Bookmark, Share2 } from "lucide-react";
 
 interface JobCardProps {
@@ -78,6 +77,8 @@ const JobCard: FC<JobCardProps> = ({
   description,
   applyUrl,
 }) => {
+  const [expanded, setExpanded] = useState(false);
+
   function parseDescription(html?: string) {
     if (!html)
       return <p className="text-gray-600 italic">No description available.</p>;
@@ -103,7 +104,7 @@ const JobCard: FC<JobCardProps> = ({
             {heading}
           </h2>
           <div
-            className="prose prose-teal max-w-none text-base prose-ul:list-disc prose-ul:pl-6 prose-li:mb-2"
+            className="prose prose-teal max-w-none text-xs leading-relaxed prose-ul:list-disc prose-ul:pl-6 prose-li:mb-2 font-sans"
             dangerouslySetInnerHTML={{ __html: contentHtml }}
           />
         </section>
@@ -149,11 +150,27 @@ const JobCard: FC<JobCardProps> = ({
 
       {/* Body Row */}
       <div className="w-full max-w-5xl mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="col-span-2 bg-white rounded-2xl shadow p-8">
+        <div className="col-span-2 bg-white rounded-lg border border-gray-300 p-6 relative">
           <h2 className="text-2xl font-bold mb-6 border-b border-gray-200 pb-3">
             Job Description
           </h2>
-          {parseDescription(description)}
+
+          <div
+            className={`prose prose-teal max-w-none text-xs leading-relaxed prose-ul:list-disc prose-ul:pl-6 prose-li:mb-2 font-sans transition-all duration-300 ease-in-out ${
+              expanded ? "max-h-[1000px]" : "max-h-[240px]"
+            }`}
+            style={{ overflow: "hidden", scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            {parseDescription(description)}
+          </div>
+
+          <button
+            onClick={() => setExpanded((prev) => !prev)}
+            className="mt-4 text-teal-600 hover:underline font-semibold text-xs"
+            aria-expanded={expanded}
+          >
+            {expanded ? "Show Less" : "Read More"}
+          </button>
         </div>
 
         <div className="space-y-8">
