@@ -12,16 +12,16 @@ import (
 )
 
 func SetupRouter(
-    userController *controllers.UserController,
-    authController *controllers.AuthController,
-    jobController *controllers.JobController,
-    authMiddleware *infrastructure.AuthMiddleware,
-    fileController *controllers.FileController,
-    cvController *controllers.CVController,
-    contactController *controllers.ContactController,
-    chatController *controllers.ChatController,
+	userController *controllers.UserController,
+	authController *controllers.AuthController,
+	jobController *controllers.JobController,
+	authMiddleware *infrastructure.AuthMiddleware,
+	fileController *controllers.FileController,
+	cvController *controllers.CVController,
+	contactController *controllers.ContactController,
+	chatController *controllers.ChatController, // Add this parameter
 ) *gin.Engine {
-    r := gin.Default()
+	r := gin.Default()
 
 	// Prevent automatic trailing slash redirects (fix 307 for POST)
 	r.RedirectTrailingSlash = false
@@ -41,34 +41,34 @@ func SetupRouter(
 		c.AbortWithStatus(204)
 	})
 
-    // Swagger docs
-    r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// Swagger docs
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	api := r.Group("/api/v1")
 	{
 		// Public routes
 		api.POST("/contact", contactController.SubmitContactForm)
 
-        auth := api.Group("/auth")
-        {
-            auth.POST("/register", userController.Register)
-            auth.POST("/login", userController.Login)
-            auth.POST("/verify-email", userController.VerifyEmail)
-            auth.POST("/forgot-password", userController.RequestPasswordReset)
-            auth.POST("/reset-password", userController.ResetPassword)
-            auth.POST("/refresh", authController.RefreshToken)
-            auth.POST("/logout", authMiddleware.RequireAuth(), authController.Logout)
-            auth.POST("/resend-otp", userController.ResendOTP)
-            auth.POST("/change-password", authMiddleware.RequireAuth(), userController.ChangePassword)
-        }
+		auth := api.Group("/auth")
+		{
+			auth.POST("/register", userController.Register)
+			auth.POST("/login", userController.Login)
+			auth.POST("/verify-email", userController.VerifyEmail)
+			auth.POST("/forgot-password", userController.RequestPasswordReset)
+			auth.POST("/reset-password", userController.ResetPassword)
+			auth.POST("/refresh", authController.RefreshToken)
+			auth.POST("/logout", authMiddleware.RequireAuth(), authController.Logout)
+			auth.POST("/resend-otp", userController.ResendOTP)
+			auth.POST("/change-password", authMiddleware.RequireAuth(), userController.ChangePassword)
+		}
 
-        users := api.Group("/users")
-        users.Use(authMiddleware.RequireAuth())
-        {
-            users.GET("/profile", userController.GetProfile)
-            users.PUT("/profile", userController.UpdateProfile)
-            users.DELETE("/account", userController.DeleteAccount)
-        }
+		users := api.Group("/users")
+		users.Use(authMiddleware.RequireAuth())
+		{
+			users.GET("/profile", userController.GetProfile)
+			users.PUT("/profile", userController.UpdateProfile)
+			users.DELETE("/account", userController.DeleteAccount)
+		}
 
 		// Job routes
 		jobs := api.Group("/jobs")
@@ -97,15 +97,6 @@ func SetupRouter(
 			admin.PUT("/users/:user_id/toggle-status", userController.ToggleUserStatus)
 			admin.DELETE("/users/:user_id", userController.DeleteUser)
 
-            // Job management
-            jobAdmin := admin.Group("/jobs")
-            {
-                jobAdmin.POST("/aggregate", jobController.TriggerJobAggregation) // Trigger job scraping
-                jobAdmin.POST("/", jobController.CreateJob)                      // Create job
-                jobAdmin.PUT("/:id", jobController.UpdateJob)                    // Update job
-                jobAdmin.DELETE("/:id", jobController.DeleteJob)                 // Delete job
-            }
-        }
 			jobAdmin := admin.Group("/jobs")
 			{
 				jobAdmin.POST("/aggregate", jobController.TriggerJobAggregation)
@@ -135,20 +126,30 @@ func SetupRouter(
 			cv.GET("/parse/:jobId/status", cvController.GetParsingJobStatusHandler)
 			cv.GET("/:id", cvController.GetParsingJobStatusHandler)
 		}
+
+		// Chat routes - moved inside the api group
+		chatRoutes := api.Group("/chat")
+		chatRoutes.Use(authMiddleware.RequireAuth())
+		{
+			chatRoutes.POST("/message", chatController.SendMessage)
+			chatRoutes.GET("/sessions", chatController.GetUserSessions)
+			chatRoutes.GET("/session/:session_id", chatController.GetSessionHistory)
+			chatRoutes.DELETE("/session/:session_id", chatController.DeleteSession)
+		}
 	}
 
-    // Health check
-    r.GET("/health", func(c *gin.Context) {
-        c.JSON(200, gin.H{
-            "success": true,
-            "message": "Service is healthy",
-            "data": gin.H{
-                "status":    "ok",
-                "timestamp": time.Now().UTC(),
-                "version":   "1.0.0",
-            },
-        })
-    })
+	// Health check
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"success": true,
+			"message": "Service is healthy",
+			"data": gin.H{
+				"status":    "ok",
+				"timestamp": time.Now().UTC(),
+				"version":   "1.0.0",
+			},
+		})
+	})
 
-    return r
+	return r
 }
