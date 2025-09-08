@@ -9,7 +9,7 @@ export default function ProfileSetup() {
   const [message, setMessage] = useState<string | null>(null);
 
   const token =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhiZDQ2ZGU2MTA2OTdmMTNlNTk2M2Q0IiwiZW1haWwiOiJuZXd1c2VyQGV4YW1wbGUuY29tIiwicm9sZSI6InVzZXIiLCJ0eXBlIjoiYWNjZXNzIiwiaXNzIjoiam9iZ2VuLWFwaSIsInN1YiI6IjY4YmQ0NmRlNjEwNjk3ZjEzZTU5NjNkNCIsImV4cCI6MTc1NzM2MDIzMCwibmJmIjoxNzU3MjczODMwLCJpYXQiOjE3NTcyNzM4MzAsImp0aSI6IjQzYWU4ODhmLTY0NzgtNDg4YS1iZGY4LWZkN2Q5ODExOTdlNSJ9.6PIWkcnbU1KJ7MTz_TtGuhsWCov3gt5j8KVRQmj26IY";
+    "..";
 
   useEffect(() => {
     const fetchProfile = async () => {
