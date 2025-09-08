@@ -56,6 +56,7 @@ func (u *chatUsecase) SendMessage(ctx context.Context, req *domain.ChatRequest) 
 		SessionID: session.ID,
 		Role:      "user",
 		Content:   req.Message,
+		CVData:    req.CVData,
 	}
 	err = u.chatRepo.SaveMessage(ctx, userMessage)
 	if err != nil {
@@ -64,7 +65,15 @@ func (u *chatUsecase) SendMessage(ctx context.Context, req *domain.ChatRequest) 
 	
 	// Generate AI response
 	var aiResponse string
-	if strings.Contains(strings.ToLower(req.Message), "analyze my cv") {
+	var suggestions []domain.Suggestion
+	
+	if req.CVData != nil {
+		// CV improvement mode
+		aiResponse, suggestions, err = u.aiService.ImproveCV(ctx, req.CVData, req.Message, history)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate CV improvement response: %v", err)
+		}
+	} else if strings.Contains(strings.ToLower(req.Message), "analyze my cv") {
 		// Special handling for CV analysis
 		aiResponse, err = u.aiService.AnalyzeCV(ctx, extractCVText(req.Message))
 	} else if strings.Contains(strings.ToLower(req.Message), "find job") || 
@@ -82,9 +91,11 @@ func (u *chatUsecase) SendMessage(ctx context.Context, req *domain.ChatRequest) 
 	
 	// Save AI response
 	aiMessage := &domain.ChatMessage{
-		SessionID: session.ID,
-		Role:      "assistant",
-		Content:   aiResponse,
+		SessionID:   session.ID,
+		Role:        "assistant",
+		Content:     aiResponse,
+		CVData:      req.CVData,
+		Suggestions: suggestions,
 	}
 	err = u.chatRepo.SaveMessage(ctx, aiMessage)
 	if err != nil {
@@ -116,9 +127,10 @@ func (u *chatUsecase) SendMessage(ctx context.Context, req *domain.ChatRequest) 
 	}
 	
 	return &domain.ChatResponse{
-		SessionID: session.ID,
-		Message:   aiResponse,
-		History:   updatedHistory,
+		SessionID:   session.ID,
+		Message:     aiResponse,
+		History:     updatedHistory,
+		Suggestions: suggestions,
 	}, nil
 }
 

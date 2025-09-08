@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 
-	"jobgen-backend/Domain"
+	domain "jobgen-backend/Domain"
 
 	"github.com/gin-gonic/gin"
-	"fmt"
 )
 
 type ChatController struct {
@@ -149,9 +149,9 @@ func parseIntQueryParam(ctx *gin.Context, param string, defaultValue int) int {
 		return defaultValue
 	}
 	
-	var intValue int
-	if _, err := fmt.Sscanf(value, "%d", &intValue); err == nil {
-		return intValue
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		return defaultValue
 	}
-	return defaultValue
+	return intValue
 }
