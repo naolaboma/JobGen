@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link"; // import Link from next
 import { Menu, X } from "lucide-react";
 
 export default function Navbar() {
@@ -31,30 +32,19 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            <a
-              href="#"
+            <Link
+              href="/user-home/fallback-page" 
               className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
             >
               Jobs
-            </a>
-            <a
-              href="#"
-              className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
-            >
-              Blog
-            </a>
-            <a
-              href="#"
-              className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
-            >
-              About
-            </a>
-            <a
-              href="#"
+            </Link>
+           
+            <Link
+              href="/contact-us" // updated link
               className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
             >
               Contact
-            </a>
+            </Link>
             <div className="w-8 h-8 rounded-full overflow-hidden cursor-pointer ring-0 hover:ring-2 hover:ring-[#44C3BB]/60 hover:scale-150 transition-all duration-200 z-50">
               <Image
                 src="/professional-woman-dark-hair.png"
@@ -71,11 +61,7 @@ export default function Navbar() {
             onClick={toggleMobileMenu}
             className="md:hidden p-2 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
           >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
+            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
 
@@ -83,27 +69,14 @@ export default function Navbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-white/20 dark:border-gray-700 bg-gradient-to-r from-[#44C3BB] to-[#3AB5AD] dark:from-gray-900 dark:to-gray-800">
             <div className="flex flex-col gap-4">
-              <a
-                href="#"
-                onClick={closeMobileMenu}
-                className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
-              >
-                Blog
-              </a>
-              <a
-                href="#"
-                onClick={closeMobileMenu}
-                className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
-              >
-                About
-              </a>
-              <a
-                href="#"
+              
+              <Link
+                href="/contact-us" // updated link
                 onClick={closeMobileMenu}
                 className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
               >
                 Contact
-              </a>
+              </Link>
             </div>
           </div>
         )}

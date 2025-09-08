@@ -33,19 +33,19 @@ export function LandingHeader({
           <nav className="hidden md:flex items-center space-x-8">
             <a
               href="#features"
-              className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+              className="text-white hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
             >
               Features
             </a>
             <a
               href="#pricing"
-              className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+              className="text-white hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
             >
               Pricing
             </a>
             <a
               href="#partners"
-              className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+              className="text-white  hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
             >
               Partners
             </a>
@@ -83,19 +83,19 @@ export function LandingHeader({
             <div className="flex flex-col space-y-4">
               <a
                 href="#features"
-                className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+                className="text-white hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
               >
                 Features
               </a>
               <a
                 href="#pricing"
-                className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+                className="text-white hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
               >
                 Pricing
               </a>
               <a
                 href="#partners"
-                className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+                className="text-white hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
               >
                 Partners
               </a>
