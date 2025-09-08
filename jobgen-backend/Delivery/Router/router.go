@@ -18,8 +18,8 @@ func SetupRouter(
 	authMiddleware *infrastructure.AuthMiddleware,
 	fileController *controllers.FileController,
 	cvController *controllers.CVController,
-	contactController *controllers.ContactController, // New: Contact Controller
-
+	contactController *controllers.ContactController,
+	chatController *controllers.ChatController, // Add this parameter
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -125,6 +125,16 @@ func SetupRouter(
 			cv.POST("/parse", cvController.StartParsingJobHandler)
 			cv.GET("/parse/:jobId/status", cvController.GetParsingJobStatusHandler)
 			cv.GET("/:id", cvController.GetParsingJobStatusHandler)
+		}
+
+		// Chat routes - moved inside the api group
+		chatRoutes := api.Group("/chat")
+		chatRoutes.Use(authMiddleware.RequireAuth())
+		{
+			chatRoutes.POST("/message", chatController.SendMessage)
+			chatRoutes.GET("/sessions", chatController.GetUserSessions)
+			chatRoutes.GET("/session/:session_id", chatController.GetSessionHistory)
+			chatRoutes.DELETE("/session/:session_id", chatController.DeleteSession)
 		}
 	}
 
