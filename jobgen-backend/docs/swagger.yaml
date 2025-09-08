@@ -957,6 +957,41 @@ paths:
       summary: Start CV parsing job (file or reference)
       tags:
       - CV
+  /cv/{jobId}:
+    get:
+      description: Fetch the current status and (if finished) the parsed result of
+        a CV parsing job.
+      parameters:
+      - description: Parsing Job ID
+        in: path
+        name: jobId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Job status and result
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: User not authenticated
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "403":
+          description: User not authorized to view this job
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+        "404":
+          description: Job not found
+          schema:
+            $ref: '#/definitions/controllers.StandardResponse'
+      security:
+      - BearerAuth: []
+      summary: Get CV parsing job status
+      tags:
+      - CV
   /cv/parse:
     post:
       consumes:

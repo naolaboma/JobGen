@@ -1,13 +1,14 @@
 package router
 
 import (
-    controllers "jobgen-backend/Delivery/Controllers"
-    infrastructure "jobgen-backend/Infrastructure"
-    "time"
+	controllers "jobgen-backend/Delivery/Controllers"
+	infrastructure "jobgen-backend/Infrastructure"
+	"time"
 
-    "github.com/gin-gonic/gin"
-    swaggerFiles "github.com/swaggo/files"
-    ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func SetupRouter(
@@ -22,26 +23,31 @@ func SetupRouter(
 ) *gin.Engine {
     r := gin.Default()
 
-    // CORS setup (production: restrict origins)
-    r.Use(func(c *gin.Context) {
-        c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-        c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-        c.Writer.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
-        c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        if c.Request.Method == "OPTIONS" {
-            c.AbortWithStatus(204)
-            return
-        }
-        c.Next()
-    })
+	// Prevent automatic trailing slash redirects (fix 307 for POST)
+	r.RedirectTrailingSlash = false
+
+	// CORS setup - allow all origins, methods, headers (development)
+	r.Use(cors.New(cors.Config{
+		AllowAllOrigins:  true, // allow everything
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Authorization", "Content-Type"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: false, // must be false when AllowAllOrigins = true
+		MaxAge:           12 * time.Hour,
+	}))
+
+	// Respond to preflight OPTIONS requests
+	r.OPTIONS("/*cors", func(c *gin.Context) {
+		c.AbortWithStatus(204)
+	})
 
     // Swagger docs
     r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-    api := r.Group("/api/v1")
-    {
-        // Public routes
-        api.POST("/contact", contactController.SubmitContactForm) // New: Contact Form Submission
+	api := r.Group("/api/v1")
+	{
+		// Public routes
+		api.POST("/contact", contactController.SubmitContactForm)
 
         auth := api.Group("/auth")
         {
@@ -64,44 +70,32 @@ func SetupRouter(
             users.DELETE("/account", userController.DeleteAccount)
         }
 
-        // Job routes (public access for browsing)
-        jobs := api.Group("/jobs")
-        {
-            jobs.GET("/", jobController.GetJobs)                            // Public job browsing
-            jobs.GET("/:id", jobController.GetJobByID)                      // Public job details
-            jobs.GET("/trending", jobController.GetTrendingJobs)            // Public trending jobs
-            jobs.GET("/stats", jobController.GetJobStats)                   // Public job statistics
-            jobs.GET("/sources", jobController.GetJobSources)               // Public job sources
-            jobs.GET("/search-by-skills", jobController.SearchJobsBySkills) // Public skill-based search
+		// Job routes
+		jobs := api.Group("/jobs")
+		{
+			jobs.GET("", jobController.GetJobs)
+			jobs.GET("/", jobController.GetJobs)
+			jobs.GET("/:id", jobController.GetJobByID)
+			jobs.GET("/trending", jobController.GetTrendingJobs)
+			jobs.GET("/stats", jobController.GetJobStats)
+			jobs.GET("/sources", jobController.GetJobSources)
+			jobs.GET("/search-by-skills", jobController.SearchJobsBySkills)
+			jobs.GET("/search", authMiddleware.OptionalAuth(), jobController.SearchJobs)
 
-            // Authenticated job routes (optional auth using OptionalAuth middleware)
-            jobs.GET("/search", authMiddleware.OptionalAuth(), jobController.SearchJobs) // Enhanced with user context if authenticated
+			authenticated := jobs.Group("/")
+			authenticated.Use(authMiddleware.RequireAuth())
+			{
+				authenticated.GET("/matched", jobController.GetMatchedJobs)
+			}
+		}
 
-            // Authenticated-only job routes
-            authenticated := jobs.Group("/")
-            authenticated.Use(authMiddleware.RequireAuth())
-            {
-                authenticated.GET("/matched", jobController.GetMatchedJobs) // Personalized job matching
-            }
-        }
-
-        // Chat routes
-        chatRoutes := api.Group("/chat")
-        chatRoutes.Use(authMiddleware.RequireAuth())
-        {
-            chatRoutes.POST("/message", chatController.SendMessage)
-            chatRoutes.GET("/sessions", chatController.GetUserSessions)
-            chatRoutes.GET("/session/:session_id", chatController.GetSessionHistory)
-            chatRoutes.DELETE("/session/:session_id", chatController.DeleteSession)
-        }
-
-        admin := api.Group("/admin")
-        admin.Use(authMiddleware.RequireAdmin())
-        {
-            admin.GET("/users", userController.GetUsers)
-            admin.PUT("/users/:user_id/role", userController.UpdateUserRole)
-            admin.PUT("/users/:user_id/toggle-status", userController.ToggleUserStatus)
-            admin.DELETE("/users/:user_id", userController.DeleteUser)
+		admin := api.Group("/admin")
+		admin.Use(authMiddleware.RequireAdmin())
+		{
+			admin.GET("/users", userController.GetUsers)
+			admin.PUT("/users/:user_id/role", userController.UpdateUserRole)
+			admin.PUT("/users/:user_id/toggle-status", userController.ToggleUserStatus)
+			admin.DELETE("/users/:user_id", userController.DeleteUser)
 
             // Job management
             jobAdmin := admin.Group("/jobs")
@@ -112,20 +106,36 @@ func SetupRouter(
                 jobAdmin.DELETE("/:id", jobController.DeleteJob)                 // Delete job
             }
         }
+			jobAdmin := admin.Group("/jobs")
+			{
+				jobAdmin.POST("/aggregate", jobController.TriggerJobAggregation)
+				jobAdmin.POST("/", jobController.CreateJob)
+				jobAdmin.PUT("/:id", jobController.UpdateJob)
+				jobAdmin.DELETE("/:id", jobController.DeleteJob)
+			}
+		}
 
-        files := api.Group("/files")
-        files.Use(authMiddleware.RequireAuth())
-        {
-            files.GET("/:id", fileController.DownloadFile)
-            files.GET("/profile-picture/:id", fileController.GetProfilePicture)
-            files.GET("/profile-picture/me", fileController.GetMyProfilePicture)
-            files.POST("/upload/profile", fileController.UploadProfile)
-            files.POST("/upload/document", fileController.UploadDocument)
-            files.DELETE("/:id", fileController.DeleteFile)
-        }
+		files := api.Group("/files")
+		files.Use(authMiddleware.RequireAuth())
+		{
+			files.GET("/:id", fileController.DownloadFile)
+			files.GET("/profile-picture/:id", fileController.GetProfilePicture)
+			files.GET("/profile-picture/me", fileController.GetMyProfilePicture)
+			files.POST("/upload/profile", fileController.UploadProfile)
+			files.POST("/upload/document", fileController.UploadDocument)
+			files.DELETE("/:id", fileController.DeleteFile)
+		}
 
-        addCVRoutes(api, cvController, authMiddleware.RequireAuth())
-    }
+		// CV routes (updated to match Users/Files style)
+		cv := api.Group("/cv")
+		cv.Use(authMiddleware.RequireAuth())
+		{
+			cv.POST("/", cvController.StartParsingJobFromRef)
+			cv.POST("/parse", cvController.StartParsingJobHandler)
+			cv.GET("/parse/:jobId/status", cvController.GetParsingJobStatusHandler)
+			cv.GET("/:id", cvController.GetParsingJobStatusHandler)
+		}
+	}
 
     // Health check
     r.GET("/health", func(c *gin.Context) {
@@ -141,15 +151,4 @@ func SetupRouter(
     })
 
     return r
-}
-
-func addCVRoutes(router *gin.RouterGroup, cvController *controllers.CVController, authMiddleware gin.HandlerFunc) {
-    cvRoutes := router.Group("/cv")
-    cvRoutes.Use(authMiddleware)
-    {
-        cvRoutes.POST("/", cvController.StartParsingJobFromRef)
-        cvRoutes.POST("/parse", cvController.StartParsingJobHandler)
-        cvRoutes.GET("/parse/:jobId/status", cvController.GetParsingJobStatusHandler)
-        cvRoutes.GET("/:id", cvController.GetParsingJobStatusHandler)
-    }
 }

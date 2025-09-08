@@ -4,6 +4,7 @@ go 1.24.5
 
 require (
 	github.com/gabriel-vasile/mimetype v1.4.10
+	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v5 v5.3.0
