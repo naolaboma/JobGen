@@ -1,5 +1,6 @@
 // app/job-details/[jobId]/page.tsx
 import JobDetails from "@/app/components/JobDetails";
+import Navbar from "@/app/components/header";
 
 export default function JobDetailsPage({
   params,
@@ -7,6 +8,10 @@ export default function JobDetailsPage({
   params: { jobId: string };
 }) {
   const { jobId } = params;
-  // JobDetails is a client component (it does data fetching in the client)
-  return <JobDetails jobId={jobId} />;
+  
+  return (<>
+ <Navbar/>
+  <JobDetails jobId={jobId} />
+
+  </>);
 }
