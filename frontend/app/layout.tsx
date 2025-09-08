@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { ReduxProvider } from "@/store/Provider";
+import NextAuthSessionProvider from "./components/NextAuthSessionProvider"; // Import the new provider
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,12 +30,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ReduxProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            {children}
-          </ThemeProvider>
-        </ReduxProvider>
-      </body>
-    </html>
+        <NextAuthSessionProvider>
+          <ReduxProvider>
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+              {children}
+            </ThemeProvider>
+          </ReduxProvider>
+        </NextAuthSessionProvider>
+      </body >
+    </html >
   );
 }

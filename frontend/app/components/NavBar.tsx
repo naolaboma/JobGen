@@ -98,7 +98,7 @@ export default function Navbar() {
                 About
               </a>
               <a
-                href="#"
+                href="/contact-us"
                 onClick={closeMobileMenu}
                 className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
               >
