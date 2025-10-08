@@ -147,7 +147,7 @@ jobgen/
 │  │  ├─ config/
 │  │  ├─ logging/
 │  │  └─ util/
-│  ├─ pkg/ (shared libs if needed)
+│  ├─ pkg/
 │  ├─ go.mod
 │  └─ go.sum
 ├─ frontend/
@@ -155,7 +155,7 @@ jobgen/
 │  │  ├─ components/
 │  │  ├─ pages/
 │  │  ├─ hooks/
-│  │  ├─ services/ (API clients)
+│  │  ├─ services/
 │  │  ├─ context/
 │  │  ├─ utils/
 │  │  └─ types/
@@ -167,7 +167,7 @@ jobgen/
 │  │  ├─ backend.Dockerfile
 │  │  └─ frontend.Dockerfile
 │  ├─ docker-compose.yml
-│  └─ k8s/ (future manifests)
+│  └─ k8s/
 ├─ docs/
 │  ├─ prompts/
 │  └─ api/
@@ -194,9 +194,9 @@ type Session struct {
 ```go
 type CVSuggestion struct {
     ID          string
-    Category    string   // e.g. "Skills", "Experience", "Summary"
+    Category    string
     Text        string
-    Priority    int      // 1=High
+    Priority    int
     Tags        []string
 }
 ```
@@ -212,7 +212,7 @@ type JobListing struct {
     Remote       bool
     URL          string
     Description  string
-    RawJSON      []byte // optional cache
+    RawJSON      []byte
     RetrievedAt  time.Time
 }
 ```
@@ -224,7 +224,7 @@ type MatchResult struct {
     MatchScore    float64
     MatchedSkills []string
     MissingSkills []string
-    AIExplanation string // optional
+    AIExplanation string
 }
 ```
 
@@ -270,9 +270,9 @@ json: {"text": "paste of CV ..."}
 
 Store prompt templates under `docs/prompts/` and load at startup.
 
-Example: CV Analysis Prompt (pseudo-template):
+CV Analysis Prompt:
 ```
-You are a career coach analyzing an African tech professional's CV. 
+You are a career coach analyzing an African tech professional's CV.
 Return a JSON array of suggestions. Each suggestion:
 - category (Summary, Experience, Skills, Education, Formatting, Keywords)
 - priority (1=High,2=Medium,3=Low)
@@ -291,7 +291,7 @@ User Instruction: "{{INSTRUCTION}}"
 Return ONLY improved bullet(s).
 ```
 
-Job Match Explanation Prompt (optional per top N):
+Job Match Explanation Prompt:
 ```
 Given CV (short summary + skills) and job description, rate match 0-100 and list matched_skills & missing_skills.
 Return JSON {score, matched_skills, missing_skills, explanation}
@@ -299,61 +299,56 @@ Return JSON {score, matched_skills, missing_skills, explanation}
 
 Token Optimization:
 - Truncate CV to max characters.
-- Extract skills first (regex / skill dictionary), feed summarized skill list into subsequent prompts instead of full CV when possible.
+- Extract skills first (regex / dictionary), feed summarized skill list into subsequent prompts.
 
 ---
 
 ## 10. Matching Algorithm
 
 MVP:
-1. Extract candidate skills (normalized lowercase).
-2. For each job description:
-   - Tokenize & count overlap with skills (weighted by importance).
-   - BaseScore = (matchedSkillCount / totalCandidateSkills) * 70.
-   - Bonus if title keywords align (e.g., “engineer”, “python”, “full stack”).
-   - Clip 0–95 (reserve >95 for AI refined).
-3. Sort descending, pick top 3–5.
+1. Extract candidate skills (normalized).
+2. For each job:
+   - Overlap count (weighted).
+   - BaseScore = (matched / totalCandidateSkills) * 70.
+   - Title keyword bonus.
+   - Cap at 95.
 
-Enhanced (Week 3 or Post-MVP):
-- Use AI scoring for top ~10 jobs only.
-- Incorporate seniority detection (e.g., “Senior”, “Lead” vs candidate experience).
-- Negative penalties (e.g., missing “React” for “React Developer” role).
+Enhanced:
+- AI scoring for top 10.
+- Seniority alignment.
+- Negative penalties for missing critical explicit skills.
 
 ---
 
 ## 11. Resume Text Extraction & Parsing
 
-Approach:
-- For PDF: attempt text extraction server-side with minimal dependency (Go PDF text extractor). If extraction fails or yields low density, fallback: ask user to paste text (“Couldn’t parse – please paste”).
-- Section heuristics: find headings (case-insensitive) `(?m)^(experience|education|skills|projects|summary)\b`.
-- Skill extraction: maintain a curated skill dictionary (JSON) plus dynamic capture (capitalized tech words). Optionally ask AI to refine.
+- PDF: try Go library; fallback ask for paste.
+- Section detection via regex headings.
+- Skill extraction: curated dictionary + pattern capture.
+- Optionally AI refine skill list.
 
 ---
 
 ## 12. Frontend UX Notes
 
 Components:
-- `ChatWindow`: messages with role (user|ai|system).
-- `CVUploader`: file + paste area.
-- `SuggestionList`: collapsible categories.
-- `JobCard`: title, company, match bar (progress), missing skill badges (grey), matched skill badges (green).
-- `RewriteModal`: show original, new suggestion preview.
+- ChatWindow
+- CVUploader
+- SuggestionList (group by category)
+- JobCard (title/company/match bar)
+- RewriteModal
 
-Conversation Pattern:
-1. System hint: “Upload your CV to begin.”
-2. After analysis: quick actions:
-   - Buttons: [Find Jobs] [Rewrite a Bullet] [Show Extracted Skills]
-3. Loading states: skeleton for suggestions, spinner for jobs.
-
-Accessibility:
-- Keyboard navigation for chat.
-- Clear alt text for icons.
+Flow:
+1. Prompt to upload.
+2. Show suggestions with quick actions:
+   - [Find Jobs] [Rewrite a Bullet] [Show Extracted Skills]
+3. Loading indicators & accessible design.
 
 ---
 
 ## 13. Environment Variables
 
-Backend (`.env.example`):
+Backend `.env.example`:
 ```
 PORT=8080
 AI_PROVIDER=openai
@@ -367,7 +362,7 @@ RATE_LIMIT_RPS=3
 ALLOWED_ORIGINS=http://localhost:3000
 ```
 
-Frontend (`.env`):
+Frontend `.env`:
 ```
 REACT_APP_API_BASE=http://localhost:8080
 REACT_APP_BUILD_ENV=development
@@ -377,134 +372,87 @@ REACT_APP_BUILD_ENV=development
 
 ## 14. Local Development Setup
 
-Prereqs:
-- Go 1.22+
-- Node 20+ / PNPM or Yarn
-- Docker (optional)
-- Make (optional)
+Prerequisites: Go 1.22+, Node 20+, Docker (optional).
 
-Steps:
 ```
 git clone https://github.com/naolaboma/JobGen.git
 cd JobGen
 cp backend/.env.example backend/.env
-# Add OpenAI key
+# Add AI key
 cd backend && go mod tidy && go run cmd/api/main.go
-# In new terminal
+# new terminal
 cd frontend && npm install && npm run dev
 ```
-Visit: `http://localhost:3000`
+
+Visit `http://localhost:3000`.
 
 ---
 
 ## 15. Running the Stack (Docker)
 
-`docker-compose.yml` (planned) includes:
-- `backend` (expose 8080)
-- `frontend` (expose 3000, depends_on backend)
-- `redis` (future)
-
-Command:
 ```
 docker compose up --build
 ```
+
+Services: backend, frontend (and future redis).
 
 ---
 
 ## 16. Testing Strategy
 
 Backend:
-- Unit tests for:
-  - Skill extraction
-  - Match scoring
-  - Prompt builder (deterministic segments)
-- Integration tests:
-  - `/cv/analyze` with fixture CV text (mock AI provider)
-  - `/jobs/search` with mocked job feed
-- Use an AI mock layer returning canned JSON.
-
+- Unit: skill extraction, scoring, prompt builder.
+- Integration: analyze & job search with AI mock.
 Frontend:
-- Component tests (React Testing Library): `SuggestionList`, `JobCard`.
-- E2E (Playwright) for main flow (upload -> suggestions -> job search).
-
-CI:
-- GitHub Actions running `go test ./...` then `npm test`.
-- Lint: `golangci-lint`, `eslint`, `prettier`.
+- Component tests (React Testing Library).
+- E2E (Playwright) main flow.
+CI: GitHub Actions; run `go test`, `npm test`, lint.
 
 ---
 
 ## 17. Logging, Monitoring & Observability
 
-- Structured JSON logs (`zap` or `zerolog`).
-- Correlation ID per request (middleware).
-- Metrics (future): Prometheus endpoint `/metrics`.
-- Log events: AI call start/end (duration), job fetch count, rewrite requests, errors.
+- Structured JSON logs (`zerolog` or `zap`).
+- Correlation IDs middleware.
+- Prometheus metrics endpoint (future).
+- Key metrics: AI latency, job fetch count, match compute time.
 
 ---
 
 ## 18. Security & Privacy
 
-- Do not permanently persist CV text in MVP (store in memory session only).
-- Provide “Clear Data” endpoint.
-- Sanitize logs (never log full CV).
-- Rate limit to mitigate abuse / cost runaway.
-- CORS locked to known origins in prod.
-- Future: OAuth (GitHub/Google) for persistent user profile.
+- Ephemeral CV storage in memory.
+- Clear Data endpoint.
+- No full CV in logs.
+- Rate limit & CORS restrictions.
+- Future: encryption at rest if persistence added.
 
 ---
 
 ## 19. Performance & Scalability
 
-Anticipated Bottlenecks:
-- AI latency (1–4s).
-- Job feed fetch (network).
-Mitigations:
-- Cache job feed for X minutes (configurable).
-- Parallel AI scoring for top matches (goroutines).
-- Use streaming responses (future) for incremental display.
-
-Scaling:
-- Stateless backend instances behind load balancer.
-- Redis session store.
-- CDN for frontend static assets.
+- Cache job feeds (TTL).
+- Parallel scoring with goroutines.
+- AI scoring only for top subset.
+- Horizontal scaling with shared Redis session store.
 
 ---
 
 ## 20. Deployment Strategy
 
-Stages:
-1. MVP: Single VM / PaaS (Render/Fly.io).
-2. Container images published to GHCR.
-3. Domain & TLS (Caddy / Nginx reverse proxy).
-4. Add CD pipeline on main branch tag.
+- Phase 1: Single container on Render/Fly.io.
+- GH Actions build & push Docker images (GHCR).
+- Domain + TLS (Caddy/NGINX).
+- Future: K8s manifests.
 
 ---
 
 ## 21. Roadmap
 
-Week 1:
-- CV upload & raw analysis endpoint.
-- Basic chat UI scaffold.
-- Skill extraction + suggestions display.
-
-Week 2:
-- Rewrite endpoint.
-- Job search integration (RemoteOK).
-- Match scoring MVP & job cards.
-
-Week 3:
-- Polishing (UX, error states).
-- Optional AI match explanation.
-- Privacy controls & simple analytics.
-- README, docs, test coverage uplift.
-
-Post-MVP:
-- Interview prep mode.
-- Additional job sources (LinkedIn API / Indeed integration if allowed).
-- User accounts & saved profiles.
-- ATS-friendly CV export.
-- Skill gap analysis & learning path suggestions.
-- Amharic helper mode.
+Week 1: CV analysis, suggestions, skill extraction.  
+Week 2: Rewrites, job search integration, scoring, chat polish.  
+Week 3: Match explanations, privacy polish, tests, performance tune.  
+Post-MVP: Interview prep, more sources, persistent profiles, CV export, skill gap analysis, localization.
 
 ---
 
@@ -512,49 +460,39 @@ Post-MVP:
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| AI cost escalation | Budget overruns | Rate limiting, cache suggestions |
-| Poor PDF extraction | Bad analysis | Fallback ask user to paste text |
-| Unreliable job source | Missing results | Cache & multiple sources |
-| Generic AI advice | Low perceived value | Prompt tuning; require actionable items |
-| Latency | User frustration | Parallelization & caching |
-| Data privacy concerns | Trust loss | Ephemeral storage + disclosure note |
+| AI cost | Budget | Rate limit, cache |
+| PDF parse failures | Poor suggestions | Paste fallback |
+| Single job source | Limited results | Add sources, cached fallback |
+| Generic advice | Low value | Prompt tuning, require specifics |
+| Latency | UX degrade | Parallel & cache |
+| Privacy concern | Trust | Ephemeral storage & disclosure |
 
 ---
 
 ## 23. Contribution Guidelines
 
-1. Fork & branch naming: `feature/<slug>` or `fix/<slug>`.
-2. Conventional commits (e.g., `feat(cv): add rewrite endpoint`).
-3. Run tests & lints before PR.
-4. PR template should include:
-   - Description
-   - Screenshots (UI changes)
-   - Test coverage or manual test steps
-5. Code Style:
-   - Go: `gofmt`, `golangci-lint`.
-   - TS: ESLint + Prettier.
-6. Avoid committing secrets; use `.env` (in `.gitignore`).
-7. Document new endpoints in `docs/api/`.
+1. Branch naming: `feature/<slug>`, `fix/<slug>`.
+2. Conventional commits.
+3. Run tests + lint before PR.
+4. PR Template (description, screenshots, tests).
+5. Go: `gofmt`, `golangci-lint`; TS: ESLint + Prettier.
+6. No secrets committed.
+7. Document new endpoints.
 
 ---
 
 ## 24. License
 
-(Choose one—suggestion: MIT for broad adoption.)
-
-Example:
 ```
 MIT License
-Copyright (c) 2025 ...
 ```
 
 ---
 
 ## 25. Acknowledgements / Inspiration
-- RemoteOK job feed
-- Global career coaching frameworks
-- OpenAI / modern LLM capabilities inspiring conversational UX
-- Communities empowering African tech talent (e.g., A2SV, local hubs)
+- RemoteOK
+- OpenAI & LLM ecosystem
+- African tech talent communities (A2SV, local hubs)
 
 ---
 
@@ -563,22 +501,24 @@ Copyright (c) 2025 ...
 Backend:
 ```
 cd backend
-cp .env.example .env  # add AI key
+cp .env.example .env
 go run cmd/api/main.go
 ```
+
 Frontend:
 ```
 cd frontend
 npm install
 npm run dev
 ```
-Visit: `http://localhost:3000`
+
+Navigate to `http://localhost:3000`.
 
 ---
 
 ## Status Disclaimer
-This README reflects a forward-looking architecture and may include placeholders pending implementation (AI provider abstraction, multi-source job integration). Update it as actual components solidify.
+This README is forward-looking; update sections as actual implementations are completed.
 
 ---
 
-Happy building! Feel free to open issues for clarification or improvement proposals.
+Happy building! 🎉
