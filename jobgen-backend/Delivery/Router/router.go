@@ -3,6 +3,9 @@ package router
 import (
 	controllers "jobgen-backend/Delivery/Controllers"
 	infrastructure "jobgen-backend/Infrastructure"
+	"log"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -21,7 +24,23 @@ func SetupRouter(
 	contactController *controllers.ContactController,
 	chatController *controllers.ChatController, // Add this parameter
 ) *gin.Engine {
-	r := gin.Default()
+	r := gin.New()
+
+	// Configure trusted proxies per Gin security guidance
+	// https://pkg.go.dev/github.com/gin-gonic/gin#readme-don-t-trust-all-proxies
+	if tp := os.Getenv("TRUSTED_PROXIES"); strings.TrimSpace(tp) == "" {
+		if err := r.SetTrustedProxies(nil); err != nil {
+			log.Printf("failed to set trusted proxies: %v", err)
+		}
+	} else {
+		parts := strings.Split(tp, ",")
+		for i := range parts {
+			parts[i] = strings.TrimSpace(parts[i])
+		}
+		if err := r.SetTrustedProxies(parts); err != nil {
+			log.Printf("failed to set trusted proxies: %v", err)
+		}
+	}
 
 	// Prevent automatic trailing slash redirects (fix 307 for POST)
 	r.RedirectTrailingSlash = false

@@ -142,7 +142,9 @@ func main() {
 	{
 		redisClient := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
 		// Ping to check connectivity with a tiny timeout
-		if err := redisClient.Ping(ctxWithTimeout(2 * time.Second)).Err(); err != nil {
+		ctx, cancel := ctxWithTimeout(2 * time.Second)
+		defer cancel()
+		if err := redisClient.Ping(ctx).Err(); err != nil {
 			log.Printf("⚠️ Redis not available (%v). Falling back to in-memory queue.", err)
 			queueService = infrastructure.NewInMemoryQueueService(200)
 		} else {
@@ -231,7 +233,6 @@ type ErrorInfo struct {
 }
 
 // ctxWithTimeout is a tiny helper to avoid repeating context.WithTimeout boilerplate.
-func ctxWithTimeout(d time.Duration) context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), d)
-	return ctx
+func ctxWithTimeout(d time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), d)
 }
