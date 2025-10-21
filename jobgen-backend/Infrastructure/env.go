@@ -43,6 +43,7 @@ type EnvConfig struct {
 	// AI (Gemini API)
 	GeminiAPIKey string
 	GeminiModel  string
+	GeminiRPM    int // requests per minute limit for SDK client
 }
 
 var Env EnvConfig
@@ -61,6 +62,12 @@ func LoadEnv() {
 	maxFileUrlLife, err := strconv.ParseInt(maxFileUrlLifeStr, 10, 64)
 	if err != nil {
 		log.Fatalf("Invalid MAX_ALLOWED_FILE_SIZE: %v", err)
+	}
+	// Gemini RPM
+	geminiRPMStr := getEnv("GEMINI_RPM", "30")
+	geminiRPM, err := strconv.Atoi(geminiRPMStr)
+	if err != nil || geminiRPM < 0 {
+		geminiRPM = 30
 	}
 	Env = EnvConfig{
 		MongoDBURI:           getEnv("MONGODB_URI", "mongodb://localhost:27017"),
@@ -83,7 +90,8 @@ func LoadEnv() {
 		MaxFileUrlLife:       maxFileUrlLife,
 		MaxAllowedFileSize:   maxSize,
 		GeminiAPIKey:         getEnv("GEMINI_API_KEY", ""),
-		GeminiModel:          getEnv("GEMINI_MODEL", "gemini-1.5-flash"),
+		GeminiModel:          getEnv("GEMINI_MODEL", "gemini-1.5-pro"),
+		GeminiRPM:            geminiRPM,
 	}
 
 	// Validate required environment variables

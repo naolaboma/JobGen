@@ -16,7 +16,7 @@ import (
 type aiService struct {
 	client      *genai.Client
 	model       *genai.GenerativeModel
-	rateLimiter *rate.Limiter
+	rateLimiter *rate.Limiter // may be nil when disabled
 }
 
 func NewAIService() (domain.IAIService, error) {
@@ -34,21 +34,43 @@ func NewAIService() (domain.IAIService, error) {
 	}
 	
 	model := client.GenerativeModel(modelName)
+	// Stronger outputs
+	{
+		// genai.GenerationConfig is a value type with pointer fields
+		t := float32(0.7)
+		tp := float32(0.95)
+		tk := int32(40)
+		max := int32(2048)
+		model.GenerationConfig = genai.GenerationConfig{
+			Temperature:     &t,
+			TopP:            &tp,
+			TopK:            &tk,
+			MaxOutputTokens: &max,
+		}
+	}
 	
-	// Set up rate limiting (3 requests per minute)
-	rateLimiter := rate.NewLimiter(rate.Every(time.Minute), 3)
+	// Set up configurable rate limiting
+	var limiter *rate.Limiter
+	rpm := Env.GeminiRPM
+	if rpm > 0 {
+		// average rpm with burst = rpm
+		perReq := time.Minute / time.Duration(rpm)
+		limiter = rate.NewLimiter(rate.Every(perReq), rpm)
+	}
 	
 	return &aiService{
 		client:      client,
 		model:       model,
-		rateLimiter: rateLimiter,
+		rateLimiter: limiter,
 	}, nil
 }
 
 func (s *aiService) GenerateResponse(ctx context.Context, prompt string, history []domain.ChatMessage) (string, error) {
 	// Apply rate limiting
-	if err := s.rateLimiter.Wait(ctx); err != nil {
-		return "", fmt.Errorf("rate limit exceeded: %v", err)
+	if s.rateLimiter != nil {
+		if err := s.rateLimiter.Wait(ctx); err != nil {
+			return "", fmt.Errorf("rate limit exceeded: %v", err)
+		}
 	}
 	
 	// Start a chat session
@@ -85,8 +107,10 @@ func (s *aiService) GenerateResponse(ctx context.Context, prompt string, history
 }
 
 func (s *aiService) AnalyzeCV(ctx context.Context, cvText string) (string, error) {
-	if err := s.rateLimiter.Wait(ctx); err != nil {
-		return "", fmt.Errorf("rate limit exceeded: %v", err)
+	if s.rateLimiter != nil {
+		if err := s.rateLimiter.Wait(ctx); err != nil {
+			return "", fmt.Errorf("rate limit exceeded: %v", err)
+		}
 	}
 	
 	prompt := fmt.Sprintf(`You are JobGen, an AI career assistant specializing in helping African professionals find remote tech jobs. 
@@ -114,8 +138,10 @@ func (s *aiService) AnalyzeCV(ctx context.Context, cvText string) (string, error
 }
 
 func (s *aiService) FindJobs(ctx context.Context, userProfile, query string) (string, error) {
-	if err := s.rateLimiter.Wait(ctx); err != nil {
-		return "", fmt.Errorf("rate limit exceeded: %v", err)
+	if s.rateLimiter != nil {
+		if err := s.rateLimiter.Wait(ctx); err != nil {
+			return "", fmt.Errorf("rate limit exceeded: %v", err)
+		}
 	}
 	
 	prompt := fmt.Sprintf(`You are JobGen, an AI career assistant specializing in helping African professionals find remote tech jobs. 
@@ -144,8 +170,10 @@ func (s *aiService) FindJobs(ctx context.Context, userProfile, query string) (st
 }
 
 func (s *aiService) ImproveCV(ctx context.Context, cv *domain.CV, userQuery string, history []domain.ChatMessage) (string, []domain.Suggestion, error) {
-	if err := s.rateLimiter.Wait(ctx); err != nil {
-		return "", nil, fmt.Errorf("rate limit exceeded: %v", err)
+	if s.rateLimiter != nil {
+		if err := s.rateLimiter.Wait(ctx); err != nil {
+			return "", nil, fmt.Errorf("rate limit exceeded: %v", err)
+		}
 	}
 	
 	// Check if CV is nil
@@ -237,7 +265,7 @@ func (s *aiService) formatCVForAI(cv *domain.CV) string {
 		if suggestion.Applied {
 			status = "APPLIED"
 		}
-		sb.WriteString(fmt.Sprintf("%d. [%s] %s: %s\n", 
+		sb.WriteString(fmt.Sprintf("%d. [%s] %s: %s\n",
 			i+1, status, suggestion.Type, suggestion.Content))
 	}
 	
