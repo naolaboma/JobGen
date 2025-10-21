@@ -25,26 +25,44 @@ export default function Navbar() {
                 </div>
               </div>
             </div>
-            <Link href="/" className="text-xl font-semibold text-white dark:text-gray-100">
+            <Link
+              href="/"
+              className="text-xl font-semibold text-white dark:text-gray-100"
+            >
               JobGen
             </Link>
           </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            <Link href="/user-home" className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors">
+            <Link
+              href="/user-home"
+              className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
+            >
               Jobs
             </Link>
-            <Link href="/chat" className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors">
+            <Link
+              href="/chat"
+              className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
+            >
               Chat
             </Link>
-            <Link href="/profile" className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors">
+            <Link
+              href="/profile"
+              className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
+            >
               Profile
             </Link>
-            <Link href="/settings" className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors">
+            <Link
+              href="/settings"
+              className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
+            >
               Settings
             </Link>
-            <Link href="/contact-us" className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors">
+            <Link
+              href="/contact-us"
+              className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
+            >
               Contact
             </Link>
             <div className="w-8 h-8 rounded-full overflow-hidden cursor-pointer ring-0 hover:ring-2 hover:ring-[#44C3BB]/60 hover:scale-150 transition-all duration-200 z-50">
@@ -75,19 +93,39 @@ export default function Navbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-white/20 dark:border-gray-700 bg-gradient-to-r from-[#44C3BB] to-[#3AB5AD] dark:from-gray-900 dark:to-gray-800">
             <div className="flex flex-col gap-4">
-              <Link href="/user-home" onClick={closeMobileMenu} className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors">
+              <Link
+                href="/user-home"
+                onClick={closeMobileMenu}
+                className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
+              >
                 Jobs
               </Link>
-              <Link href="/chat" onClick={closeMobileMenu} className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors">
+              <Link
+                href="/chat"
+                onClick={closeMobileMenu}
+                className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
+              >
                 Chat
               </Link>
-              <Link href="/profile" onClick={closeMobileMenu} className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors">
+              <Link
+                href="/profile"
+                onClick={closeMobileMenu}
+                className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
+              >
                 Profile
               </Link>
-              <Link href="/settings" onClick={closeMobileMenu} className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors">
+              <Link
+                href="/settings"
+                onClick={closeMobileMenu}
+                className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
+              >
                 Settings
               </Link>
-              <Link href="/contact-us" onClick={closeMobileMenu} className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors">
+              <Link
+                href="/contact-us"
+                onClick={closeMobileMenu}
+                className="hover:text-gray-200 dark:hover:text-gray-300 transition-colors"
+              >
                 Contact
               </Link>
             </div>
