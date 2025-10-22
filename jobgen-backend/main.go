@@ -12,10 +12,11 @@ import (
 	worker "jobgen-backend/Worker"
 	_ "jobgen-backend/docs" // This line is important for swagger
 	"log"
+	"os"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 )
 
 // @title JobGen API
@@ -138,18 +139,43 @@ func main() {
 	// --- Initialize Infrastructure & Services ---
 	cvParserService := infrastructure.NewCVParserService() // New CV Parser
 
-	// Initialize Queue service: try Redis, fall back to in-memory if not reachable
+	// Initialize Queue service: use Redis only if configured; otherwise fallback to in-memory
 	var queueService infrastructure.QueueService
 	{
-		redisClient := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-		// Ping to check connectivity with a tiny timeout
-		ctx, cancel := ctxWithTimeout(2 * time.Second)
-		defer cancel()
-		if err := redisClient.Ping(ctx).Err(); err != nil {
-			log.Printf("⚠️ Redis not available (%v). Falling back to in-memory queue.", err)
+		redisURL := os.Getenv("REDIS_URL")
+		redisAddr := os.Getenv("REDIS_ADDR")
+		if redisURL == "" && redisAddr == "" {
+			log.Printf("Redis not configured. Using in-memory queue.")
 			queueService = infrastructure.NewInMemoryQueueService(200)
 		} else {
-			queueService = infrastructure.NewQueueService(redisClient, "cv_processing_queue")
+			var rdb *redis.Client
+			var err error
+			if redisURL != "" {
+				if opt, perr := redis.ParseURL(redisURL); perr == nil {
+					rdb = redis.NewClient(opt)
+					err = nil
+				} else {
+					err = perr
+				}
+			} else {
+				// REDIS_ADDR form host:port with optional REDIS_PASSWORD
+				rdb = redis.NewClient(&redis.Options{Addr: redisAddr, Password: os.Getenv("REDIS_PASSWORD")})
+			}
+
+			if err != nil {
+				log.Printf("Redis config error (%v). Falling back to in-memory queue.", err)
+				queueService = infrastructure.NewInMemoryQueueService(200)
+			} else {
+				ctx, cancel := ctxWithTimeout(2 * time.Second)
+				defer cancel()
+				if pingErr := rdb.Ping(ctx).Err(); pingErr != nil {
+					log.Printf("Redis not available (%v). Using in-memory queue.", pingErr)
+					queueService = infrastructure.NewInMemoryQueueService(200)
+				} else {
+					queueService = infrastructure.NewQueueService(rdb, "cv_processing_queue")
+					log.Printf("Redis connected. Using Redis-backed queue.")
+				}
+			}
 		}
 	}
 	aiServiceClient := infrastructure.NewAIServiceClient() // Gemini AI Client
