@@ -78,44 +78,26 @@ function getCroppedImg(imageSrc: string, crop: Area): Promise<string> {
 }
 
 export default function ProfilePage() {
-  // Demo data for fallback
-  const demoData = {
-    userName: "Random User",
-    role: "Admin",
-    fullName: "Random User",
-    email: "RandomUser@gmail.com",
-    phone: "",
-    location: "",
-    jobType: "Remote",
-    country: "Ethiopia",
-    city: "Addis Ababa",
-    skills: [
-      { name: "AI Modeling" },
-      { name: "Data Analysis" },
-      { name: "Full-Stack Dev" },
-    ],
-    bio: "This is a sample bio for the user. Update your profile to add more details.",
-    profilePic: "/person.png",
-  };
-
-  const { data: profile } = useGetProfileQuery();
+  const { data: profile, isLoading: isProfileLoading } = useGetProfileQuery();
   const { data: profilePicBlob } = useGetMyProfilePictureQuery();
 
-  const [profilePic, setProfilePic] = useState<string>(demoData.profilePic);
+  const defaultPic = "/person.png";
+  const [profilePic, setProfilePic] = useState<string>(defaultPic);
   useEffect(() => {
     if (profilePicBlob) {
       const url = URL.createObjectURL(profilePicBlob);
       setProfilePic(url);
       return () => URL.revokeObjectURL(url);
     } else {
-      setProfilePic(demoData.profilePic);
+      setProfilePic(defaultPic);
     }
-  }, [profilePicBlob, demoData.profilePic]);
+  }, [profilePicBlob]);
 
-  const [bio, setBio] = useState(demoData.bio);
+  // Text fields
+  const [bio, setBio] = useState("");
   useEffect(() => {
-    setBio(profile?.bio || demoData.bio);
-  }, [profile?.bio, demoData.bio]);
+    setBio(profile?.bio || "");
+  }, [profile?.bio]);
   const BIO_WORD_LIMIT = 50;
   const getBioWordCount = (text: string) =>
     text.trim().split(/\s+/).filter(Boolean).length;
@@ -225,6 +207,78 @@ export default function ProfilePage() {
     setCvFile(null);
     setCvUrl("");
   };
+
+  // Form data (no hardcoded demo). Initialize empty, then populate from profile
+  const [formData, setFormData] = useState({
+    userName: "",
+    role: "user",
+    fullName: "",
+    email: "",
+    phone: "",
+    location: "",
+    jobType: "" as any,
+    country: "",
+    city: "",
+    skills: [] as { name: string }[],
+    profilePic: defaultPic,
+  });
+
+  useEffect(() => {
+    if (!profile) return;
+    setFormData({
+      userName: profile.username || "",
+      role: (profile.role as UserRole) || "user",
+      fullName: profile.full_name || "",
+      email: profile.email || "",
+      phone: profile.phone_number || "",
+      location: profile.location || "",
+      jobType: (profile.job_type as JobType) || ("" as any),
+      country: profile.preferred_country || "",
+      city: profile.city_region || "",
+      skills: Array.isArray(profile.skills)
+        ? profile.skills.map((s: string) => ({ name: s }))
+        : [],
+      profilePic: profilePic || defaultPic,
+    });
+  }, [profile, profilePic]);
+
+  const [skills, setSkills] = useState<{ name: string }[]>([]);
+  useEffect(() => {
+    setSkills(
+      Array.isArray(profile?.skills)
+        ? profile!.skills.map((s: string) => ({ name: s }))
+        : []
+    );
+  }, [profile?.skills]);
+  const [editingSkills, setEditingSkills] = useState(false);
+
+  const cityOptions = {
+    Ethiopia: [
+      "Addis Ababa",
+      "Dire Dawa",
+      "Bahir Dar",
+      "Hawassa",
+      "Mekelle",
+      "Gondar",
+    ],
+    USA: ["New York", "Los Angeles", "Washington D.C.", "Atlanta"],
+  };
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => {
+      if (field === "country") {
+        const newCountry = value as keyof typeof cityOptions;
+        const firstCity = cityOptions[newCountry]?.[0] || "";
+        return { ...prev, [field]: value, city: firstCity };
+      }
+      return { ...prev, [field]: value };
+    });
+  };
+
   const handleUpdateProfile = async () => {
     const payload = {
       username: formData.userName,
@@ -256,75 +310,13 @@ export default function ProfilePage() {
     }
   };
 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  // Form data with fallback to demo data
-  const [formData, setFormData] = useState({ ...demoData });
-  useEffect(() => {
-    setFormData({
-      userName: profile?.username || demoData.userName,
-      role: profile?.role || demoData.role,
-      fullName: profile?.full_name || demoData.fullName,
-      email: profile?.email || demoData.email,
-      phone: profile?.phone_number || demoData.phone,
-      location: profile?.location || demoData.location,
-      jobType: profile?.job_type || demoData.jobType,
-      country: profile?.preferred_country || demoData.country,
-      city: profile?.city_region || demoData.city,
-      skills:
-        profile?.skills && profile.skills.length > 0
-          ? profile.skills.map((s: string) => ({ name: s }))
-          : demoData.skills,
-      bio: profile?.bio || demoData.bio,
-      profilePic: profilePic || demoData.profilePic,
-    });
-  }, [profile, profilePic]);
-
-  const [skills, setSkills] = useState<{ name: string }[]>(demoData.skills);
-  useEffect(() => {
-    if (profile?.skills && profile.skills.length > 0) {
-      setSkills(profile.skills.map((s: string) => ({ name: s })));
-    } else {
-      setSkills(demoData.skills);
-    }
-  }, [profile?.skills]);
-  const [editingSkills, setEditingSkills] = useState(false);
-
-  const cityOptions = {
-    Ethiopia: [
-      "Addis Ababa",
-      "Dire Dawa",
-      "Bahir Dar",
-      "Hawassa",
-      "Mekelle",
-      "Gondar",
-    ],
-    USA: ["New York", "Los Angeles", "Washington D.C.", "Atlanta"],
-  };
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false);
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => {
-      if (field === "country") {
-        const newCountry = value as keyof typeof cityOptions;
-        return {
-          ...prev,
-          [field]: value,
-          city: cityOptions[newCountry][0],
-        };
-      }
-      return {
-        ...prev,
-        [field]: value,
-      };
-    });
-  };
+  if (isProfileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-600">
+        Loading profile…
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
@@ -348,15 +340,24 @@ export default function ProfilePage() {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-8">
-              <a href="#" className="hover:text-gray-200 transition-colors">
+              <Link
+                href="/blog"
+                className="hover:text-gray-200 transition-colors"
+              >
                 Blog
-              </a>
-              <a href="#" className="hover:text-gray-200 transition-colors">
+              </Link>
+              <Link
+                href="/about"
+                className="hover:text-gray-200 transition-colors"
+              >
                 About
-              </a>
-              <a href="#" className="hover:text-gray-200 transition-colors">
+              </Link>
+              <Link
+                href="/contact-us"
+                className="hover:text-gray-200 transition-colors"
+              >
                 Contact
-              </a>
+              </Link>
               <div className="w-8 h-8 rounded-full overflow-hidden cursor-pointer transition-all duration-200 ring-0 hover:ring-2 hover:ring-[#44C3BB]/60 hover:scale-150 z-50">
                 <Image
                   src={profilePic}
@@ -386,27 +387,27 @@ export default function ProfilePage() {
           {isMobileMenuOpen && (
             <div className="md:hidden py-4 border-t border-white/20">
               <div className="flex flex-col gap-4">
-                <a
-                  href="#"
+                <Link
+                  href="/blog"
                   onClick={closeMobileMenu}
                   className="hover:text-gray-200 transition-colors"
                 >
                   Blog
-                </a>
-                <a
-                  href="#"
+                </Link>
+                <Link
+                  href="/about"
                   onClick={closeMobileMenu}
                   className="hover:text-gray-200 transition-colors"
                 >
                   About
-                </a>
-                <a
-                  href="#"
+                </Link>
+                <Link
+                  href="/contact-us"
                   onClick={closeMobileMenu}
                   className="hover:text-gray-200 transition-colors"
                 >
                   Contact
-                </a>
+                </Link>
               </div>
             </div>
           )}
@@ -417,8 +418,7 @@ export default function ProfilePage() {
       <div className="max-w-7xl mx-auto my-4 px-4 mt-8 sm:px-6 lg:px-8 py-6 w-full flex">
         <div className="w-full flex justify-start">
           <Link
-            // href="/dashboard"
-            href="/settings"
+            href="/user-home"
             className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -507,10 +507,10 @@ export default function ProfilePage() {
                     )}
                   </div>
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                    {formData.userName}
+                    {formData.userName || "User"}
                   </h2>
                   <p className="text-gray-600 dark:text-gray-400">
-                    {formData.role}
+                    {String(formData.role || "user").toUpperCase()}
                   </p>
                 </div>
 
@@ -527,7 +527,7 @@ export default function ProfilePage() {
                       </label>
                       <input
                         type="text"
-                        value={formData.fullName || demoData.fullName}
+                        value={formData.fullName}
                         onChange={(e) =>
                           handleInputChange("fullName", e.target.value)
                         }
@@ -541,7 +541,7 @@ export default function ProfilePage() {
                       </label>
                       <input
                         type="email"
-                        value={formData.email || demoData.email}
+                        value={formData.email}
                         onChange={(e) =>
                           handleInputChange("email", e.target.value)
                         }
@@ -554,7 +554,7 @@ export default function ProfilePage() {
                       </label>
                       <input
                         type="tel"
-                        value={formData.phone || demoData.phone}
+                        value={formData.phone}
                         onChange={(e) =>
                           handleInputChange("phone", e.target.value)
                         }
@@ -568,7 +568,7 @@ export default function ProfilePage() {
                       </label>
                       <input
                         type="text"
-                        value={formData.location || demoData.location}
+                        value={formData.location}
                         onChange={(e) =>
                           handleInputChange("location", e.target.value)
                         }
@@ -755,7 +755,7 @@ export default function ProfilePage() {
                         Job Type
                       </label>
                       <select
-                        value={formData.jobType || demoData.jobType}
+                        value={formData.jobType}
                         onChange={(e) =>
                           handleInputChange("jobType", e.target.value)
                         }
@@ -777,7 +777,7 @@ export default function ProfilePage() {
                         Preferred Country
                       </label>
                       <select
-                        value={formData.country || demoData.country}
+                        value={formData.country}
                         onChange={(e) =>
                           handleInputChange("country", e.target.value)
                         }
@@ -793,7 +793,7 @@ export default function ProfilePage() {
                         City/Region
                       </label>
                       <select
-                        value={formData.city || demoData.city}
+                        value={formData.city}
                         onChange={(e) =>
                           handleInputChange("city", e.target.value)
                         }
@@ -801,8 +801,7 @@ export default function ProfilePage() {
                       >
                         {(
                           cityOptions[
-                            (formData.country as keyof typeof cityOptions) ||
-                              demoData.country
+                            (formData.country as keyof typeof cityOptions) || ""
                           ] || []
                         ).map((city) => (
                           <option key={city} value={city}>

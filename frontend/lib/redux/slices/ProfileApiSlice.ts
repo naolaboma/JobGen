@@ -1,6 +1,13 @@
-import { createApi, fetchBaseQuery, type FetchArgs, type FetchBaseQueryError, type FetchBaseQueryMeta } from "@reduxjs/toolkit/query/react";
+import {
+  createApi,
+  fetchBaseQuery,
+  type FetchArgs,
+  type FetchBaseQueryError,
+  type FetchBaseQueryMeta,
+} from "@reduxjs/toolkit/query/react";
 import type { BaseQueryFn } from "@reduxjs/toolkit/query";
 import type { ProfileData } from "../../../types/ProfileData";
+import { getSession } from "next-auth/react";
 
 type UploadResponse = {
   url?: string;
@@ -10,26 +17,49 @@ type UploadResponse = {
 };
 
 const rawBaseQuery = fetchBaseQuery({
-  baseUrl: "http://localhost:8080",
-  prepareHeaders: (headers) => {
-    return headers;
-  },
+  baseUrl: `${
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+  }/api/v1`,
 });
 
-const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError, object, FetchBaseQueryMeta> = async (args, api, extraOptions) => {
-  const result = await rawBaseQuery(args, api, extraOptions);
+const baseQuery: BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  FetchBaseQueryError,
+  object,
+  FetchBaseQueryMeta
+> = async (args, api, extraOptions) => {
+  const session = await getSession();
+  const token = (session as any)?.accessToken as string | undefined;
+
+  let request: FetchArgs;
+  if (typeof args === "string") {
+    request = { url: args };
+  } else {
+    request = { ...args };
+  }
+
+  // Normalize headers and attach Authorization
+  const headers = new Headers((request.headers as HeadersInit) || {});
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  request.headers = headers;
+
+  const result = await rawBaseQuery(request, api, extraOptions);
+
+  // Normalize error shape
   if (result && "error" in result && result.error) {
-    const data = result.error.data;
+    const data = (result.error as FetchBaseQueryError).data as any;
     if (typeof data === "string") {
       try {
-        result.error.data = JSON.parse(data);
+        (result.error as any).data = JSON.parse(data);
       } catch {
-        result.error.data = { message: String(data) };
+        (result.error as any).data = { message: String(data) };
       }
     } else if (!data || typeof data !== "object") {
-      result.error.data = { message: String(data) };
+      (result.error as any).data = { message: String(data) };
     }
   }
+
   return result;
 };
 

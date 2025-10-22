@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 
 // --- UI Components ---
@@ -113,6 +113,15 @@ export default function ChatBot() {
   const [sessionId, setSessionId] = useState<string>("");
   const [sending, setSending] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesViewportRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    const el = messagesViewportRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [messages]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -309,7 +318,8 @@ export default function ChatBot() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-[calc(100vh-4rem)] bg-gray-100">
+      {/* 4rem = NavBar h-16 */}
       {/* Sidebar */}
       <aside className="w-64 bg-white shadow-md p-4 flex flex-col">
         <h2 className="text-xl font-bold text-black mb-4">Chat History</h2>
@@ -319,8 +329,12 @@ export default function ChatBot() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col">
-        <div className="flex-grow p-4 overflow-y-auto space-y-4">
+      <main className="flex-1 flex flex-col min-h-0">
+        {/* min-h-0 enables proper flex scrolling */}
+        <div
+          ref={messagesViewportRef}
+          className="flex-1 p-4 overflow-y-auto space-y-4"
+        >
           {messages.map((msg, index) => {
             if (msg.type === "bubble") {
               return (
@@ -333,8 +347,8 @@ export default function ChatBot() {
           })}
         </div>
 
-        {/* Input bar */}
-        <div className="border-t p-4 flex items-center space-x-2 bg-white shadow-sm">
+        {/* Input bar - sticky at bottom */}
+        <div className="sticky bottom-0 border-t p-4 flex items-center space-x-2 bg-white shadow-sm">
           <input
             type="file"
             accept="application/pdf"
@@ -380,6 +394,7 @@ export default function ChatBot() {
             </svg>
           </button>
         </div>
+
         {file && (
           <div className="flex items-center justify-between p-4 border-t bg-white">
             <p className="text-sm text-gray-600">Selected file: {file.name}</p>

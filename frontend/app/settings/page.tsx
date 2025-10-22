@@ -31,6 +31,7 @@ import { Card, CardContent, CardHeader } from "@/app/components/customCard";
 import { Switch } from "@/app/components/ui/switch";
 import Link from "next/link";
 import Footer from "@/app/components/footer";
+import { signOut } from "next-auth/react";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -132,7 +133,7 @@ export default function SettingsPage() {
       <main className="max-w-7xl mx-auto my-2 px-6 py-8 flex-1">
         {/* Back to Dashboard */}
         <Link
-          href="/dashboard"
+          href="/user-home"
           className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -433,6 +434,7 @@ export default function SettingsPage() {
           <Button
             variant="destructive"
             className="bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 border-0 cursor-pointer"
+            onClick={() => signOut({ callbackUrl: "/login" })}
           >
             <LogOut className="w-4 h-4 mr-2" />
             Logout
