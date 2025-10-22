@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
 export default function ProfileSetup() {
   const [file, setFile] = useState<File | null>(null);
@@ -8,22 +9,23 @@ export default function ProfileSetup() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const token =
-    "..";
+  const { data: session } = useSession();
+  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+  const accessToken = (session as any)?.accessToken as string | undefined;
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch("http://localhost:8080/api/v1/users/profile", {
+        const res = await fetch(`${base}/api/v1/users/profile`, {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${token}`,
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
             Accept: "application/json",
           },
         });
 
         const data = await res.json();
-        const user = data?.data?.user;
+        const user = data?.data?.user || data?.data;
 
         if (user?.skills) {
           setSkills(user.skills);
@@ -34,8 +36,8 @@ export default function ProfileSetup() {
       }
     };
 
-    fetchProfile();
-  }, [token]);
+    if (accessToken) fetchProfile();
+  }, [accessToken, base]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -65,10 +67,10 @@ export default function ProfileSetup() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("http://localhost:8080/api/v1/cv/parse", {
+      const res = await fetch(`${base}/api/v1/cv/parse`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
           Accept: "application/json",
         },
         body: formData,
@@ -77,7 +79,11 @@ export default function ProfileSetup() {
       const data = await res.json();
 
       console.log("CV parsing response:", data);
-      setMessage("CV parsing job started successfully.");
+      setMessage(
+        res.ok
+          ? "CV parsing job started successfully."
+          : data?.message || "CV parsing failed."
+      );
     } catch (error: any) {
       console.error("Upload failed:", error);
       setMessage("CV parsing failed.");

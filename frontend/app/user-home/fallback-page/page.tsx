@@ -19,8 +19,8 @@ export default function Page() {
   const filtersWithLimit = { ...filters, limit: itemsPerPage };
 
   const { data, isLoading, error } = useFetchJobsQuery(filtersWithLimit);
-  const jobs = data?.data?.items ?? [];
-  const totalPages = data?.data?.total_pages ?? 1;
+  const jobs = data ?? [];
+  const totalPages = 1;
 
   const [showFilters, setShowFilters] = useState(false);
 
@@ -40,9 +40,16 @@ export default function Page() {
     const { name, value } = e.target;
 
     if (name === "sort_order") {
-      dispatch(setSort({ sort_order: value as "asc" | "desc", sort_by: filters.sort_by ?? "posted_at" }));
+      dispatch(
+        setSort({
+          sort_order: value as "asc" | "desc",
+          sort_by: filters.sort_by ?? "posted_at",
+        })
+      );
     } else if (name === "sort_by") {
-      dispatch(setSort({ sort_by: value, sort_order: filters.sort_order ?? "desc" }));
+      dispatch(
+        setSort({ sort_by: value, sort_order: filters.sort_order ?? "desc" })
+      );
     }
   };
 
@@ -51,11 +58,18 @@ export default function Page() {
   };
 
   if (isLoading) {
-    return <div className="text-center py-20 text-lg font-medium">Loading jobs...</div>;
+    return (
+      <div className="text-center py-20 text-lg font-medium">
+        Loading jobs...
+      </div>
+    );
   }
 
   if (error) {
-    const errorMessage = "error" in (error as any) ? (error as any).error : "Unknown error occurred";
+    const errorMessage =
+      "error" in (error as any)
+        ? (error as any).error
+        : "Unknown error occurred";
     return (
       <div className="text-center py-20 text-red-600 text-lg">
         Error: {errorMessage}
@@ -71,8 +85,12 @@ export default function Page() {
           {/* Header */}
           <div className="pt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800">Find Your Next Job</h1>
-              <p className="text-sm text-gray-600 mt-1">Curated opportunities that match your skills.</p>
+              <h1 className="text-3xl font-bold text-gray-800">
+                Find Your Next Job
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">
+                Curated opportunities that match your skills.
+              </p>
             </div>
           </div>
 
@@ -84,7 +102,10 @@ export default function Page() {
             >
               {showFilters ? "Hide Filters" : "Show Filters"}
             </button>
-            <Link href="/chatbot" className="text-sm font-medium text-[#007B83] hover:underline">
+            <Link
+              href="/chatbot"
+              className="text-sm font-medium text-[#007B83] hover:underline"
+            >
               Refine with Chatbot
             </Link>
           </div>
@@ -93,7 +114,10 @@ export default function Page() {
           {showFilters && (
             <div className="mt-4 rounded-xl border bg-white p-4 shadow-md">
               <div className="flex flex-col gap-4">
-                <SearchBar onSearch={handleSearch} initialQuery={filters.query ?? ""} />
+                <SearchBar
+                  onSearch={handleSearch}
+                  initialQuery={filters.query ?? ""}
+                />
                 <Filters
                   onFilterChange={handleFilterChange}
                   initialSkills={filters.skills ?? ""}
@@ -135,7 +159,8 @@ export default function Page() {
                 {jobs.slice(0, itemsPerPage).map((job: any) => {
                   const id = job.id ?? job.job_id ?? job._id ?? job.uuid;
                   const title = job.title ?? job.job_title ?? "Untitled role";
-                  const location = job.location ?? job.work_location ?? "Remote";
+                  const location =
+                    job.location ?? job.work_location ?? "Remote";
                   const jobType =
                     job.job_type ??
                     job.type ??
@@ -144,7 +169,8 @@ export default function Page() {
                       /full|part|contract|intern/i.test(t)
                     ) ??
                     "N/A";
-                  const company = job.company ?? job.company_name ?? job.organization;
+                  const company =
+                    job.company ?? job.company_name ?? job.organization;
 
                   return (
                     <JobSummaryCard
@@ -182,7 +208,11 @@ type PaginationProps = {
   onPageChange: (page: number) => void;
 };
 
-function PaginationSimple({ currentPage, totalPages, onPageChange }: PaginationProps) {
+function PaginationSimple({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: PaginationProps) {
   return (
     <div className="flex items-center gap-6">
       <button

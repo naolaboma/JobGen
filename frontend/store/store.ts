@@ -15,11 +15,28 @@ const store = configureStore({
     [profileApi.reducerPath]: profileApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(
-      ContactApi.middleware,
-      JobApi.middleware,
-      profileApi.middleware
-    ),
+    getDefaultMiddleware({
+      serializableCheck: {
+        // RTK Query stores non-serializable cache entries under these slices
+        ignoredPaths: [
+          ContactApi.reducerPath,
+          JobApi.reducerPath,
+          profileApi.reducerPath,
+        ],
+        // Ignore RTK Query action types that may carry non-serializable payloads
+        ignoredActions: [
+          `${ContactApi.reducerPath}/executeMutation/pending`,
+          `${ContactApi.reducerPath}/executeMutation/fulfilled`,
+          `${ContactApi.reducerPath}/executeMutation/rejected`,
+          `${JobApi.reducerPath}/executeQuery/pending`,
+          `${JobApi.reducerPath}/executeQuery/fulfilled`,
+          `${JobApi.reducerPath}/executeQuery/rejected`,
+          `${profileApi.reducerPath}/executeQuery/pending`,
+          `${profileApi.reducerPath}/executeQuery/fulfilled`,
+          `${profileApi.reducerPath}/executeQuery/rejected`,
+        ],
+      },
+    }).concat(ContactApi.middleware, JobApi.middleware, profileApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;
