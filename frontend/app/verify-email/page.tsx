@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Epilogue, Inter, Poppins } from "next/font/google";
+import { apiUrl } from "@/lib/api";
 
 const epilogue = Epilogue({ subsets: ["latin"], weight: ["400", "700"] });
 const inter = Inter({ subsets: ["latin"], weight: ["400", "700"] });
@@ -32,7 +33,7 @@ function VerifyEmailInner() {
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/verify-email`,
+        apiUrl("/api/v1/auth/verify-email"),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -69,7 +70,7 @@ function VerifyEmailInner() {
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/resend-otp`,
+        apiUrl("/api/v1/auth/resend-otp"),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

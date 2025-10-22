@@ -3,6 +3,7 @@ import { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
+import { apiUrl } from "@/lib/api";
 
 // Helper function to parse JWT
 const parseJwt = (token: string) => {
@@ -16,14 +17,11 @@ const parseJwt = (token: string) => {
 // This function handles refreshing the access token
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/refresh`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: token.refreshToken }),
-      }
-    );
+    const res = await fetch(apiUrl("/api/v1/auth/refresh"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: token.refreshToken }),
+    });
 
     const refreshedData = await res.json();
 
@@ -72,17 +70,14 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Please enter an email and password.");
         }
 
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
-          }
-        );
+        const res = await fetch(apiUrl("/api/v1/auth/login"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: credentials.email,
+            password: credentials.password,
+          }),
+        });
 
         if (!res.ok) {
           const errorData = await res

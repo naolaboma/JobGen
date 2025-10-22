@@ -5,6 +5,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Epilogue, Inter, Poppins } from "next/font/google";
+import { apiUrl } from "@/lib/api";
 
 const epilogue = Epilogue({ subsets: ["latin"], weight: ["400", "700"] });
 const inter = Inter({ subsets: ["latin"], weight: ["400", "700"] });
@@ -34,7 +35,7 @@ export default function SignUpForm() {
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/register`,
+        apiUrl("/api/v1/auth/register"),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

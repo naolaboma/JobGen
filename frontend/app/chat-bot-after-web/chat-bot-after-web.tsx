@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { apiUrl } from "@/lib/api";
 
 // --- UI Components ---
 
@@ -146,7 +147,7 @@ export default function ChatBot() {
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/cv/parse`,
+        apiUrl("/api/v1/cv/parse"),
         {
           method: "POST",
           headers: { Authorization: `Bearer ${(session as any).accessToken}` },
@@ -178,7 +179,7 @@ export default function ChatBot() {
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/matched`,
+        apiUrl("/api/v1/jobs/matched"),
         {
           headers: {
             Authorization: `Bearer ${(session as any).accessToken}`,
@@ -257,7 +258,7 @@ export default function ChatBot() {
     setSending(true);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/chat/message`,
+        apiUrl("/api/v1/chat/message"),
         {
           method: "POST",
           headers: {
