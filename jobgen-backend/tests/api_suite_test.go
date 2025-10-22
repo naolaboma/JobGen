@@ -19,6 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	// chatController, // Removed as it is unused
 )
 
 // Test Suite
@@ -247,10 +248,10 @@ func (suite *APITestSuite) SetupTest() {
 	suite.authController = controllers.NewAuthController(suite.authUsecase)
 	suite.fileController = controllers.NewFileController(suite.fileUsecase)
 	suite.authMiddleware = infrastructure.NewAuthMiddleware(suite.jwtService)
-	suite.cvController = controllers.NewCVController(suite.cvUsecase)
 	// Controllers required by router but not used in these tests
 	jobController := controllers.NewJobController(nil)
 	contactController := controllers.NewContactController(nil)
+	chatController := controllers.NewChatController(nil)
 
 	// Setup router
 	suite.router = router.SetupRouter(
@@ -261,6 +262,7 @@ func (suite *APITestSuite) SetupTest() {
 		suite.fileController,
 		suite.cvController,
 		contactController,
+		chatController,
 	)
 
 }
