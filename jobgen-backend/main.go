@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/gin-gonic/gin"
 )
 
 // @title JobGen API
@@ -191,7 +192,7 @@ func main() {
 	go cvProcessor.Start() // Run the worker in a separate goroutine
 
 	// Setup router (match parameter order defined in router.SetupRouter)
-	router := router.SetupRouter(
+	r := router.SetupRouter(
 		userController,
 		authController,
 		jobController,
@@ -201,6 +202,10 @@ func main() {
 		contactController,
 		chatController,
 	)
+
+	// Health and root endpoints for platform readiness checks
+	r.GET("/", func(c *gin.Context) { c.String(200, "OK") })
+	r.GET("/api/v1/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
 
 	// Start server
 	port := infrastructure.Env.Port
@@ -213,7 +218,7 @@ func main() {
 	log.Printf("Swagger documentation available at: http://localhost:%s/swagger/index.html", port)
 	log.Printf("AI Chatbot endpoints available at: /api/v1/chat/*")
 
-	if err := router.Run(":" + port); err != nil {
+	if err := r.Run(":" + port); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
 }
