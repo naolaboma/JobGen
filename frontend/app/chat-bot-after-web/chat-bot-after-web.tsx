@@ -192,14 +192,14 @@ export default function ChatBot() {
 
       const data = await res.json();
       if (data.items && data.items.length > 0) {
-        const jobCards = data.items.map((job: any) => ({
+        const jobCards: JobCardMessage[] = data.items.map((job: any) => ({
           type: "jobCard",
           title: job.title,
           company: job.company_name,
           location: job.location,
           salary: job.salary || "N/A",
           posted: new Date(job.posted_at).toLocaleDateString(),
-          match: Math.floor(Math.random() * 100), // Placeholder for match percentage
+          match: Math.floor(Math.random() * 100),
         }));
         setMessages((prev) => [
           ...prev,

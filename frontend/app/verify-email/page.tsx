@@ -1,6 +1,6 @@
 "use client";
 import { useForm } from "react-hook-form";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Epilogue, Inter, Poppins } from "next/font/google";
@@ -14,7 +14,7 @@ type FormValues = {
   otp: string;
 };
 
-export default function VerifyEmailPage() {
+function VerifyEmailInner() {
   const form = useForm<FormValues>();
   const { register, handleSubmit, formState } = form;
   const { errors } = formState;
@@ -49,7 +49,6 @@ export default function VerifyEmailPage() {
         setServerError(result.message || "Verification failed");
       } else {
         setIsSuccess(true);
-        // Redirect to login so user can sign in, preserve optional callback
         setTimeout(() => {
           router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
         }, 2000);
@@ -216,5 +215,19 @@ export default function VerifyEmailPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-md mx-auto mt-12 p-8 bg-white rounded shadow">
+          Loading…
+        </div>
+      }
+    >
+      <VerifyEmailInner />
+    </Suspense>
   );
 }
