@@ -82,24 +82,25 @@ function JobCard({
   );
 }
 
+// Define explicit message types
+type BubbleMessage = { type: "bubble"; text: string; byUser: boolean };
+type JobCardMessage = {
+  type: "jobCard";
+  title: string;
+  company: string;
+  location: string;
+  salary: string;
+  posted: string;
+  match: number;
+};
+
+type ChatMessage = BubbleMessage | JobCardMessage;
+
 // --- Main Chat Component ---
 
 export default function ChatBot() {
   const { data: session } = useSession();
-  const [messages, setMessages] = useState<
-    Array<
-      | { type: "bubble"; text: string; byUser: boolean }
-      | {
-          type: "jobCard";
-          title: string;
-          company: string;
-          location: string;
-          salary: string;
-          posted: string;
-          match: number;
-        }
-    >
-  >([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
       type: "bubble",
       text: "Hello! How can I help you today? Upload your resume (PDF) to get started.",
@@ -340,8 +341,19 @@ export default function ChatBot() {
               return (
                 <ChatBubble key={index} text={msg.text} byUser={msg.byUser} />
               );
-            } else if (msg.type === "jobCard") {
-              return <JobCard key={index} {...msg} />;
+            }
+            if (msg.type === "jobCard") {
+              return (
+                <JobCard
+                  key={index}
+                  title={msg.title}
+                  company={msg.company}
+                  location={msg.location}
+                  salary={msg.salary}
+                  posted={msg.posted}
+                  match={msg.match}
+                />
+              );
             }
             return null;
           })}
