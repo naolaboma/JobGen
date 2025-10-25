@@ -34,19 +34,16 @@ export default function SignUpForm() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(
-        apiUrl("/api/v1/auth/register"),
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: data.email,
-            full_name: data.fullName,
-            username: data.username,
-            password: data.password,
-          }),
-        }
-      );
+      const res = await fetch(apiUrl("/api/v1/auth/register"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: data.email,
+          full_name: data.fullName,
+          username: data.username,
+          password: data.password,
+        }),
+      });
 
       const result = await res.json().catch(() => ({} as any));
       console.log("Signup response:", result);

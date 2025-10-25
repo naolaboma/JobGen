@@ -146,14 +146,11 @@ export default function ChatBot() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(
-        apiUrl("/api/v1/cv/parse"),
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${(session as any).accessToken}` },
-          body: formData,
-        }
-      );
+      const res = await fetch(apiUrl("/api/v1/cv/parse"), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${(session as any).accessToken}` },
+        body: formData,
+      });
 
       const result = await res.json();
 
@@ -178,14 +175,11 @@ export default function ChatBot() {
     if (!session) return;
 
     try {
-      const res = await fetch(
-        apiUrl("/api/v1/jobs/matched"),
-        {
-          headers: {
-            Authorization: `Bearer ${(session as any).accessToken}`,
-          },
-        }
-      );
+      const res = await fetch(apiUrl("/api/v1/jobs/matched"), {
+        headers: {
+          Authorization: `Bearer ${(session as any).accessToken}`,
+        },
+      });
 
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -257,20 +251,17 @@ export default function ChatBot() {
 
     setSending(true);
     try {
-      const res = await fetch(
-        apiUrl("/api/v1/chat/message"),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${(session as any).accessToken}`,
-          },
-          body: JSON.stringify({
-            session_id: sessionId || undefined,
-            message: content,
-          }),
-        }
-      );
+      const res = await fetch(apiUrl("/api/v1/chat/message"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${(session as any).accessToken}`,
+        },
+        body: JSON.stringify({
+          session_id: sessionId || undefined,
+          message: content,
+        }),
+      });
       const data = await res.json();
 
       if (!res.ok) {
