@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { apiUrl } from "@/lib/api";
 
 // --- UI Components ---
 
@@ -96,27 +97,6 @@ type JobCardMessage = {
 
 type ChatMessage = BubbleMessage | JobCardMessage;
 
-// --- CV API types ---
-type CVSuggestion = {
-  id: string;
-  type: string;
-  content: string;
-  applied: boolean;
-};
-type CVStatus = "Pending" | "Processing" | "Completed" | "Failed";
-
-type CVResult = {
-  id: string;
-  userId: string;
-  status: CVStatus;
-  score: number;
-  processingError?: string;
-  skills?: string[];
-  experiences?: any[];
-  educations?: any[];
-  suggestions?: CVSuggestion[];
-};
-
 // --- Main Chat Component ---
 
 export default function ChatBot() {
@@ -137,15 +117,6 @@ export default function ChatBot() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesViewportRef = useRef<HTMLDivElement>(null);
 
-  // CV job state
-  const [cvJobId, setCvJobId] = useState<string | null>(null);
-  const [cvStatus, setCvStatus] = useState<CVStatus | null>(null);
-  const [cvScore, setCvScore] = useState<number | null>(null);
-  const pollingRef = useRef<{ active: boolean; tries: number; timer?: any }>({
-    active: false,
-    tries: 0,
-  });
-
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     const el = messagesViewportRef.current;
@@ -154,124 +125,11 @@ export default function ChatBot() {
     }
   }, [messages]);
 
-  useEffect(() => {
-    return () => {
-      // cleanup polling on unmount
-      pollingRef.current.active = false;
-      if (pollingRef.current.timer) clearTimeout(pollingRef.current.timer);
-    };
-  }, []);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFile(e.target.files[0]);
       setUploadStatus("");
     }
-  };
-
-  const startPollingJob = (jobId: string) => {
-    if (!session) return;
-    pollingRef.current.active = true;
-    pollingRef.current.tries = 0;
-
-    const poll = async () => {
-      if (!pollingRef.current.active) return;
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/cv/parse/${jobId}/status`,
-          {
-            headers: {
-              Authorization: `Bearer ${(session as any).accessToken}`,
-            },
-          }
-        );
-        const data: CVResult = await res.json();
-        if (!res.ok) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              type: "bubble",
-              text: `CV status error: ${data?.processingError || res.status}`,
-              byUser: false,
-            },
-          ]);
-          pollingRef.current.active = false;
-          return;
-        }
-
-        setCvStatus(data.status);
-        if (data.status === "Completed") {
-          setCvScore(data.score);
-          setMessages((prev) => [
-            ...prev,
-            {
-              type: "bubble",
-              text: `CV parsed successfully. Score: ${data.score}/100`,
-              byUser: false,
-            },
-          ]);
-
-          const tips = (data.suggestions || [])
-            .slice(0, 5)
-            .map((s) => `• ${s.content}`)
-            .join("\n");
-          if (tips) {
-            setMessages((prev) => [
-              ...prev,
-              {
-                type: "bubble",
-                text: `Suggestions to improve your CV:\n${tips}`,
-                byUser: false,
-              },
-            ]);
-          }
-
-          pollingRef.current.active = false;
-          // Fetch matched jobs after successful parsing
-          fetchJobSuggestions();
-          return;
-        }
-        if (data.status === "Failed") {
-          setMessages((prev) => [
-            ...prev,
-            {
-              type: "bubble",
-              text: `CV processing failed: ${
-                data.processingError || "Unknown error"
-              }`,
-              byUser: false,
-            },
-          ]);
-          pollingRef.current.active = false;
-          return;
-        }
-      } catch (err: any) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: "bubble",
-            text: `Network error while checking CV status.`,
-            byUser: false,
-          },
-        ]);
-        // keep polling with backoff
-      }
-
-      pollingRef.current.tries += 1;
-      const delay = Math.min(2000 + pollingRef.current.tries * 500, 8000); // simple backoff 2s -> 8s
-      pollingRef.current.timer = setTimeout(poll, delay);
-    };
-
-    // initial message and kick off
-    setMessages((prev) => [
-      ...prev,
-      {
-        type: "bubble",
-        text: "Parsing CV... This may take a few seconds.",
-        byUser: false,
-      },
-    ]);
-    poll();
   };
 
   const handleUpload = async () => {
@@ -288,42 +146,22 @@ export default function ChatBot() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/cv/parse`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${(session as any).accessToken}` },
-          body: formData,
-        }
-      );
+      const res = await fetch(apiUrl("/api/v1/cv/parse"), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${(session as any).accessToken}` },
+        body: formData,
+      });
 
       const result = await res.json();
 
       if (!res.ok) {
-        setUploadStatus(
-          `Error: ${result.message || result.error || "Upload failed"}`
-        );
+        setUploadStatus(`Error: ${result.message || "Upload failed"}`);
       } else {
         setUploadStatus(
           `Success: ${result.message || "File uploaded successfully!"}`
         );
         setFile(null);
-        const jobId = result.jobId as string | undefined;
-        if (jobId) {
-          setCvJobId(jobId);
-          setCvStatus("Pending");
-          startPollingJob(jobId);
-        } else {
-          // Fallback: no job id returned
-          setMessages((prev) => [
-            ...prev,
-            {
-              type: "bubble",
-              text: "Upload succeeded but no job ID was returned.",
-              byUser: false,
-            },
-          ]);
-        }
+        fetchJobSuggestions(); // Call to fetch job suggestions
       }
     } catch (err) {
       console.error("Upload error:", err);
@@ -337,14 +175,11 @@ export default function ChatBot() {
     if (!session) return;
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/matched`,
-        {
-          headers: {
-            Authorization: `Bearer ${(session as any).accessToken}`,
-          },
-        }
-      );
+      const res = await fetch(apiUrl("/api/v1/jobs/matched"), {
+        headers: {
+          Authorization: `Bearer ${(session as any).accessToken}`,
+        },
+      });
 
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -416,20 +251,17 @@ export default function ChatBot() {
 
     setSending(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/chat/message`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${(session as any).accessToken}`,
-          },
-          body: JSON.stringify({
-            session_id: sessionId || undefined,
-            message: content,
-          }),
-        }
-      );
+      const res = await fetch(apiUrl("/api/v1/chat/message"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${(session as any).accessToken}`,
+        },
+        body: JSON.stringify({
+          session_id: sessionId || undefined,
+          message: content,
+        }),
+      });
       const data = await res.json();
 
       if (!res.ok) {
@@ -487,24 +319,6 @@ export default function ChatBot() {
         <div className="flex-grow space-y-2">
           {/* Chat history will be populated here */}
         </div>
-        {/* Lightweight CV status */}
-        {cvJobId && (
-          <div className="mt-4 text-sm text-gray-700">
-            <div className="font-semibold text-black">CV Processing</div>
-            <div>
-              Job ID: <span className="text-gray-500">{cvJobId}</span>
-            </div>
-            <div>
-              Status: <span className="text-gray-500">{cvStatus}</span>
-            </div>
-            {cvScore !== null && (
-              <div>
-                Score:{" "}
-                <span className="text-black font-semibold">{cvScore}/100</span>
-              </div>
-            )}
-          </div>
-        )}
       </aside>
 
       {/* Main Content */}
@@ -584,12 +398,6 @@ export default function ChatBot() {
             </svg>
           </button>
         </div>
-
-        {uploadStatus && (
-          <div className="px-4 py-2 text-sm text-gray-700 bg-white border-t">
-            {uploadStatus}
-          </div>
-        )}
 
         {file && (
           <div className="flex items-center justify-between p-4 border-t bg-white">

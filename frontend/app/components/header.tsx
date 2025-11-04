@@ -18,8 +18,7 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
               <div className="w-6 h-6 bg-[#7BBFB3] rounded-full flex items-center justify-center">
-                <div className="flex gap-1">
-                </div>
+                <div className="flex gap-1"></div>
               </div>
             </div>
             <span className="text-xl font-semibold text-white dark:text-gray-100">
@@ -29,16 +28,22 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            <a href="#" className="hover:text-gray-200 transition-colors">
+            <a
+              href="/user-home/fallback-page"
+              className="hover:text-gray-200 transition-colors"
+            >
               Jobs
             </a>
-            <a href="#" className="hover:text-gray-200 transition-colors">
+            <a href="/blog" className="hover:text-gray-200 transition-colors">
               Blog
             </a>
-            <a href="#" className="hover:text-gray-200 transition-colors">
+            <a href="/about" className="hover:text-gray-200 transition-colors">
               About
             </a>
-            <a href="#" className="hover:text-gray-200 transition-colors">
+            <a
+              href="/contact"
+              className="hover:text-gray-200 transition-colors"
+            >
               Contact
             </a>
             <div className="w-8 h-8 rounded-full overflow-hidden cursor-pointer">
@@ -70,25 +75,32 @@ export default function Navbar() {
           <div className="md:hidden py-4 border-t border-white/20">
             <div className="flex flex-col gap-4">
               <a
-                href="#"
+                href="/blog"
                 onClick={closeMobileMenu}
                 className="hover:text-gray-200 transition-colors"
               >
                 Blog
               </a>
               <a
-                href="#"
+                href="/about"
                 onClick={closeMobileMenu}
                 className="hover:text-gray-200 transition-colors"
               >
                 About
               </a>
               <a
-                href="#"
+                href="/contact"
                 onClick={closeMobileMenu}
                 className="hover:text-gray-200 transition-colors"
               >
                 Contact
+              </a>
+              <a
+                href="/user-home/fallback-page"
+                onClick={closeMobileMenu}
+                className="hover:text-gray-200 transition-colors"
+              >
+                Jobs
               </a>
             </div>
           </div>

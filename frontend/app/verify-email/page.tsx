@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Epilogue, Inter, Poppins } from "next/font/google";
+import { apiUrl } from "@/lib/api";
 
 const epilogue = Epilogue({ subsets: ["latin"], weight: ["400", "700"] });
 const inter = Inter({ subsets: ["latin"], weight: ["400", "700"] });
@@ -31,17 +32,14 @@ function VerifyEmailInner() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/verify-email`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: data.email,
-            otp: data.otp,
-          }),
-        }
-      );
+      const res = await fetch(apiUrl("/api/v1/auth/verify-email"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: data.email,
+          otp: data.otp,
+        }),
+      });
 
       const result = await res.json();
 
@@ -68,17 +66,14 @@ function VerifyEmailInner() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/resend-otp`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: email,
-            purpose: "EMAIL_VERIFICATION",
-          }),
-        }
-      );
+      const res = await fetch(apiUrl("/api/v1/auth/resend-otp"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email,
+          purpose: "EMAIL_VERIFICATION",
+        }),
+      });
 
       if (!res.ok) {
         const result = await res.json();

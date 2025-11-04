@@ -67,24 +67,30 @@ export function FooterSection() {
             <ul className="space-y-2 text-gray-400 dark:text-gray-300">
               <li>
                 <a
-                  href="#"
+                  href="/support"
                   className="hover:text-white dark:hover:text-[#44C3BB] transition-colors"
                 >
                   Help Center
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-white transition-colors">
+                <a
+                  href="/contact"
+                  className="hover:text-white transition-colors"
+                >
                   Contact Us
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-white transition-colors">
+                <a
+                  href="/privacy"
+                  className="hover:text-white transition-colors"
+                >
                   Privacy Policy
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-white transition-colors">
+                <a href="/terms" className="hover:text-white transition-colors">
                   Terms of Service
                 </a>
               </li>
