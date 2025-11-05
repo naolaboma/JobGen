@@ -3,10 +3,11 @@ package usecases
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
-	"jobgen-backend/Domain"
+	domain "jobgen-backend/Domain"
 )
 
 type chatUsecase struct {
@@ -25,7 +26,7 @@ func (u *chatUsecase) SendMessage(ctx context.Context, req *domain.ChatRequest) 
 	// Get or create session
 	var session *domain.ChatSession
 	var err error
-	
+
 	if req.SessionID != "" {
 		session, err = u.chatRepo.GetSession(ctx, req.SessionID, req.UserID)
 		if err != nil {
@@ -44,13 +45,13 @@ func (u *chatUsecase) SendMessage(ctx context.Context, req *domain.ChatRequest) 
 			return nil, fmt.Errorf("failed to create session: %v", err)
 		}
 	}
-	
+
 	// Get recent message history (last 10 messages)
 	history, err := u.chatRepo.GetSessionMessages(ctx, session.ID, req.UserID, 10)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get message history: %v", err)
 	}
-	
+
 	// Save user message
 	userMessage := &domain.ChatMessage{
 		SessionID: session.ID,
@@ -62,21 +63,18 @@ func (u *chatUsecase) SendMessage(ctx context.Context, req *domain.ChatRequest) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to save user message: %v", err)
 	}
-	
+
 	// Generate AI response
 	var aiResponse string
 	var suggestions []domain.Suggestion
-	
+
 	if req.CVData != nil {
 		// CV improvement mode
 		aiResponse, suggestions, err = u.aiService.ImproveCV(ctx, req.CVData, req.Message, history)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate CV improvement response: %v", err)
-		}
 	} else if strings.Contains(strings.ToLower(req.Message), "analyze my cv") {
 		// Special handling for CV analysis
 		aiResponse, err = u.aiService.AnalyzeCV(ctx, extractCVText(req.Message))
-	} else if strings.Contains(strings.ToLower(req.Message), "find job") || 
+	} else if strings.Contains(strings.ToLower(req.Message), "find job") ||
 		strings.Contains(strings.ToLower(req.Message), "job search") {
 		// Special handling for job search
 		aiResponse, err = u.aiService.FindJobs(ctx, "", req.Message)
@@ -84,11 +82,14 @@ func (u *chatUsecase) SendMessage(ctx context.Context, req *domain.ChatRequest) 
 		// General conversation
 		aiResponse, err = u.aiService.GenerateResponse(ctx, req.Message, history)
 	}
-	
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate AI response: %v", err)
+		// Do NOT fail the whole request. Surface a friendly message and continue.
+		log.Printf("AI generation error: %v", err)
+		aiResponse = "I'm currently having trouble reaching the AI service. You can still ask me to upload or parse your CV, or try again in a moment."
+		suggestions = nil
 	}
-	
+
 	// Save AI response
 	aiMessage := &domain.ChatMessage{
 		SessionID:   session.ID,
@@ -101,11 +102,11 @@ func (u *chatUsecase) SendMessage(ctx context.Context, req *domain.ChatRequest) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to save AI message: %v", err)
 	}
-	
+
 	// Update session
 	session.MessageCount += 2 // User + AI messages
 	session.UpdatedAt = time.Now()
-	
+
 	// If this is a new session and we have an AI response, generate a better title
 	if session.Title == truncateString(req.Message, 50) {
 		titlePrompt := fmt.Sprintf("Generate a short title (max 5 words) for a conversation that started with: %s", req.Message)
@@ -114,18 +115,18 @@ func (u *chatUsecase) SendMessage(ctx context.Context, req *domain.ChatRequest) 
 			session.Title = truncateString(title, 30)
 		}
 	}
-	
+
 	err = u.chatRepo.UpdateSession(ctx, session)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update session: %v", err)
 	}
-	
+
 	// Get updated message history
 	updatedHistory, err := u.chatRepo.GetSessionMessages(ctx, session.ID, req.UserID, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get updated message history: %v", err)
 	}
-	
+
 	return &domain.ChatResponse{
 		SessionID:   session.ID,
 		Message:     aiResponse,
@@ -140,7 +141,7 @@ func (u *chatUsecase) GetSessionHistory(ctx context.Context, sessionID, userID s
 	if err != nil {
 		return nil, fmt.Errorf("session not found: %v", err)
 	}
-	
+
 	return u.chatRepo.GetSessionMessages(ctx, sessionID, userID, 0)
 }
 

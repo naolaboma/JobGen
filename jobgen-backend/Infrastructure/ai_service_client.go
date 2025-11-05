@@ -17,7 +17,7 @@ func NewAIServiceClient() domain.AIService { // satisfies domain.AIService
 	// Use only Gemini. No local fallback.
 	return &geminiAIServiceClient{
 		apiKey:     Env.GeminiAPIKey,
-		model:      Env.GeminiModel,
+		model:      normalizeModel(Env.GeminiModel),
 		httpClient: &http.Client{Timeout: 20 * time.Second},
 	}
 }
@@ -57,10 +57,11 @@ func (c *geminiAIServiceClient) AnalyzeCV(rawText string) ([]domain.Suggestion, 
 		return nil, errors.New("gemini api key missing")
 	}
 	model := c.model
-	if model == "" {
+	if strings.TrimSpace(model) == "" {
 		model = "gemini-1.5-flash"
 	}
-	endpoint := fmt.Sprintf("https://generativelanguage.googleapis.com/v1/models/%s:generateContent?key=%s", model, c.apiKey)
+	// Use v1beta because some models are not exposed on v1 generateContent
+	endpoint := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, c.apiKey)
 
 	instruction := "You are an assistant that extracts CV improvement suggestions. Output ONLY a compact JSON array with objects: {id: string, type: one of [\"quantification\", \"weak_action_verbs\", \"missing_keywords\"], content: string, applied: false}. No markdown, no extra text."
 
@@ -89,7 +90,6 @@ func (c *geminiAIServiceClient) AnalyzeCV(rawText string) ([]domain.Suggestion, 
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		
 		b, _ := io.ReadAll(resp.Body)
 		// try to decode standard error shape
 		var er geminiResponse
@@ -140,7 +140,7 @@ func extractJSON(s string) string {
 	s = strings.TrimPrefix(s, "```")
 	s = strings.TrimSuffix(s, "```")
 	s = strings.TrimSpace(s)
-	
+
 	start := strings.Index(s, "[")
 	end := strings.LastIndex(s, "]")
 	if start >= 0 && end > start {

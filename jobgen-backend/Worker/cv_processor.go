@@ -1,6 +1,7 @@
 package Worker
 
 import (
+	"fmt"
 	domain "jobgen-backend/Domain"
 	infrastructure "jobgen-backend/Infrastructure"
 	usecases "jobgen-backend/Usecases"
@@ -77,10 +78,25 @@ func (w *CVProcessor) processJob(jobID string) {
 		parsedResults.ProcessingError = "low_confidence_parse"
 	}
 
-	suggestions, err := w.aiService.AnalyzeCV(rawText)
-	if err != nil {
-		log.Printf("🔴 Error from AI service for job %s: %v", jobID, err)
-		w.repo.UpdateStatus(jobID, domain.StatusFailed, err.Error())
+	// Try to get AI suggestions; if it fails (e.g., invalid/absent API key), continue without failing the job
+	suggestions, aiErr := w.aiService.AnalyzeCV(rawText)
+	if aiErr != nil {
+		log.Printf("🟠 AI unavailable for job %s: %v", jobID, aiErr)
+		if parsedResults.ProcessingError != "" {
+			parsedResults.ProcessingError = fmt.Sprintf("%s; ai_unavailable", parsedResults.ProcessingError)
+		} else {
+			parsedResults.ProcessingError = "ai_unavailable"
+		}
+		parsedResults.Suggestions = nil
+		parsedResults.Score = usecases.CalculateScore(parsedResults.Suggestions)
+
+		if err := w.repo.UpdateWithResults(jobID, parsedResults); err != nil {
+			log.Printf("🔴 Error saving results (no AI) for job %s: %v", jobID, err)
+			w.repo.UpdateStatus(jobID, domain.StatusFailed, err.Error())
+			return
+		}
+		w.repo.UpdateStatus(jobID, domain.StatusCompleted)
+		log.Printf("✅ Processed job %s without AI suggestions", jobID)
 		return
 	}
 
@@ -93,5 +109,6 @@ func (w *CVProcessor) processJob(jobID string) {
 		w.repo.UpdateStatus(jobID, domain.StatusFailed, err.Error())
 		return
 	}
+	w.repo.UpdateStatus(jobID, domain.StatusCompleted)
 	log.Printf("✅ Successfully processed job ID: %s", jobID)
 }

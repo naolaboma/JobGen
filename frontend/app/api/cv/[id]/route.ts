@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 
 function backendBase() {
@@ -12,7 +13,10 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
   const { id } = context.params;
   try {
     const backend = backendBase();
-    const authHeader = req.headers.get("authorization") || undefined;
+    const session = await getServerSession(authOptions as any);
+    const token = (session as any)?.accessToken as string | undefined;
+    const incomingAuth = req.headers.get("authorization") || undefined;
+    const authHeader = token ? `Bearer ${token}` : incomingAuth;
 
     if (backend) {
       try {

@@ -1,0 +1,771 @@
+{
+  "info": {
+    "_postman_id": "8f6d9d34-8b8f-4d66-9c42-9b2bb2a8f5a5",
+    "name": "JobGen API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection for JobGen backend endpoints. Set baseUrl if needed. Login first to populate {{accessToken}} and {{refreshToken}}."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "apiBase", "value": "{{baseUrl}}/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "adminUserId", "value": "" },
+    { "key": "adminTargetUserId", "value": "" },
+    { "key": "jobEntityId", "value": "" },
+    { "key": "cvJobId", "value": "" },
+    { "key": "fileId", "value": "" },
+    { "key": "session_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health & Docs",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health"
+          }
+        },
+        {
+          "name": "Swagger",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/swagger/index.html"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "Submit Contact Form",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/contact",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"subject\": \"General Inquiry\",\n  \"message\": \"Hello, I love JobGen!\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"username\": \"user123\",\n  \"password\": \"Password123!\",\n  \"full_name\": \"User Example\",\n  \"phone_number\": \"\",\n  \"location\": \"\",\n  \"skills\": [\n    \"go\",\n    \"react\"\n  ],\n  \"experience_years\": 2,\n  \"bio\": \"\",\n  \"job_type\": \"remote\",\n  \"preferred_country\": \"\",\n  \"city_region\": \"\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/auth/verify-email",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "if (json.data && json.data.access_token) { pm.collectionVariables.set('accessToken', json.data.access_token); }",
+                  "const rt = pm.cookies.get('refresh_token');",
+                  "if (rt) { pm.collectionVariables.set('refreshToken', rt); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Access Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "if (json.data && json.data.access_token) { pm.collectionVariables.set('accessToken', json.data.access_token); }",
+                  "const rt = pm.cookies.get('refresh_token');",
+                  "if (rt) { pm.collectionVariables.set('refreshToken', rt); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/auth/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/auth/resend-otp",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"purpose\": \"EMAIL_VERIFICATION\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Request Password Reset (OTP)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/auth/forgot-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/auth/reset-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\",\n  \"new_password\": \"NewPassword123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": "{{apiBase}}/auth/logout"
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/auth/change-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"old_password\": \"Password123!\",\n  \"new_password\": \"NewPassword123!\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users (Auth)",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/users/profile"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/users/profile",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"User Example\",\n  \"location\": \"\",\n  \"skills\": [\"go\", \"react\"],\n  \"experience_years\": 3,\n  \"bio\": \"Updated bio\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{apiBase}}/users/account"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "List Jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/jobs?limit=10&page=1&query=&skills=&location=&sponsorship=&source=&sort_by=posted_at&sort_order=desc"
+          }
+        },
+        {
+          "name": "Get Job By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/jobs/{{jobEntityId}}"
+          }
+        },
+        {
+          "name": "Trending Jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/jobs/trending?limit=20"
+          }
+        },
+        {
+          "name": "Job Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/jobs/stats"
+          }
+        },
+        {
+          "name": "Job Sources",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/jobs/sources"
+          }
+        },
+        {
+          "name": "Search by Skills",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/jobs/search-by-skills?skills=go,react&limit=20"
+          }
+        },
+        {
+          "name": "Search (Optional Auth)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/jobs/search?limit=10&page=1&query=engineer&skills=go,react&location=&sponsorship=&source=&sort_by=posted_at&sort_order=desc"
+          }
+        },
+        {
+          "name": "Matched Jobs (Auth)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/jobs/matched?limit=10&page=1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin (RequireAdmin)",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/admin/users?page=1&limit=10&search=&sort_by=created_at&sort_order=desc"
+          }
+        },
+        {
+          "name": "Update User Role",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/admin/users/{{adminTargetUserId}}/role",
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"admin\"\n}" }
+          }
+        },
+        {
+          "name": "Toggle User Status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "url": "{{apiBase}}/admin/users/{{adminTargetUserId}}/toggle-status"
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{apiBase}}/admin/users/{{adminTargetUserId}}"
+          }
+        },
+        {
+          "name": "Trigger Job Aggregation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": "{{apiBase}}/admin/jobs/aggregate"
+          }
+        },
+        {
+          "name": "Create Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "const id = (json.data && (json.data.id || json.data._id)) || json.id || json._id;",
+                  "if (id) { pm.collectionVariables.set('jobEntityId', id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/admin/jobs/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Software Engineer\",\n  \"company_name\": \"Acme Inc\",\n  \"location\": \"Remote\",\n  \"description\": \"Build stuff\",\n  \"full_description_html\": \"\",\n  \"apply_url\": \"https://example.com/jobs/123\",\n  \"source\": \"manual\",\n  \"is_sponsorship_available\": false,\n  \"extracted_skills\": [\"go\", \"react\"],\n  \"salary\": \"\",\n  \"tags\": [\"remote\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Job",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/admin/jobs/{{jobEntityId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Senior Engineer\",\n  \"company_name\": \"Acme Inc\",\n  \"location\": \"Remote\",\n  \"description\": \"Build more stuff\",\n  \"extracted_skills\": [\"go\", \"cloud\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Job",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{apiBase}}/admin/jobs/{{jobEntityId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Files (Auth)",
+      "item": [
+        {
+          "name": "Upload Profile Picture (multipart)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "multipart/form-data" }
+            ],
+            "url": "{{apiBase}}/files/upload/profile",
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": "" }]
+            }
+          }
+        },
+        {
+          "name": "Upload Document (multipart)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "const id = (json.data && (json.data.id || json.data._id || json.data.file_id)) || json.id || json.file_id;",
+                  "if (id) { pm.collectionVariables.set('fileId', id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "multipart/form-data" }
+            ],
+            "url": "{{apiBase}}/files/upload/document",
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": "" }]
+            }
+          }
+        },
+        {
+          "name": "Download File (presigned URL)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/files/{{fileId}}"
+          }
+        },
+        {
+          "name": "Delete File",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{apiBase}}/files/{{fileId}}"
+          }
+        },
+        {
+          "name": "My Profile Picture URL",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/files/profile-picture/me"
+          }
+        },
+        {
+          "name": "User Profile Picture URL",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/files/profile-picture/{{userId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CV (Auth)",
+      "item": [
+        {
+          "name": "Start Parsing (multipart /cv/parse)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "const id = (json.data && (json.data.jobId || json.data.job_id || json.data.id)) || json.jobId || json.id;",
+                  "if (id) { pm.collectionVariables.set('cvJobId', id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "multipart/form-data" }
+            ],
+            "url": "{{apiBase}}/cv/parse",
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": "" }]
+            }
+          }
+        },
+        {
+          "name": "Start Parsing (fileId via /cv)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "const id = (json.data && (json.data.jobId || json.data.job_id || json.data.id)) || json.jobId || json.id;",
+                  "if (id) { pm.collectionVariables.set('cvJobId', id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/cv",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileId\": \"{{fileId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Parsing Status (/cv/parse/:jobId/status)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/cv/parse/{{cvJobId}}/status"
+          }
+        },
+        {
+          "name": "Get Parsing Status (/cv/:id) [Note: param may mismatch]",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/cv/{{cvJobId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat (Auth)",
+      "item": [
+        {
+          "name": "Send Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "const id = (json.data && (json.data.session_id || json.data.sessionId || json.data.id)) || json.session_id || json.sessionId || json.id;",
+                  "if (id) { pm.collectionVariables.set('session_id', id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{apiBase}}/chat/message",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"\",\n  \"message\": \"Help me improve my CV\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Sessions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/chat/sessions?limit=10&offset=0"
+          }
+        },
+        {
+          "name": "Get Session History",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/chat/session/{{session_id}}"
+          }
+        },
+        {
+          "name": "Delete Session",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{apiBase}}/chat/session/{{session_id}}"
+          }
+        }
+      ]
+    }
+  ]
+}
