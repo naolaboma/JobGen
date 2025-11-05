@@ -24,7 +24,19 @@ export async function middleware(req: NextRequest) {
   }
 
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  const isAuth = !!token;
+  // Safely normalize exp to a number (ms)
+  const expSec =
+    typeof token?.exp === "number"
+      ? token.exp
+      : typeof token?.exp === "string"
+      ? parseInt(token.exp, 10)
+      : undefined;
+  const expMs =
+    typeof expSec === "number" && Number.isFinite(expSec)
+      ? expSec * 1000
+      : undefined;
+  const isExpired = typeof expMs === "number" ? Date.now() >= expMs : false;
+  const isAuth = !!token && !isExpired;
   const isProtected = PROTECTED_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );
@@ -38,7 +50,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect unauthenticated users to login with callbackUrl
+  // Redirect unauthenticated or expired sessions to login with callbackUrl
   if (!isAuth && isProtected) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
