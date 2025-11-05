@@ -150,6 +150,9 @@ export default function ChatBot() {
       // Use internal API route which proxies auth and backend
       const res = await fetch("/api/cv/parse", {
         method: "POST",
+        headers: {
+          ...(session ? { Authorization: `Bearer ${(session as any).accessToken}` } : {}),
+        },
         body: formData,
       });
 
@@ -187,7 +190,11 @@ export default function ChatBot() {
     const maxAttempts = 30; // every 2s
     for (let i = 0; i < maxAttempts; i++) {
       try {
-        const r = await fetch(`/api/cv/${encodeURIComponent(jobId)}`);
+        const r = await fetch(`/api/cv/${encodeURIComponent(jobId)}`, {
+          headers: {
+            ...(session ? { Authorization: `Bearer ${(session as any).accessToken}` } : {}),
+          },
+        });
         const j = await r.json();
         if (r.ok && (j.status === "Completed" || j.status === "Failed")) {
           if (j.status === "Completed") {
