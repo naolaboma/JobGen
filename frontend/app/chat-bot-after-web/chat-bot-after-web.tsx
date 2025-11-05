@@ -114,6 +114,7 @@ export default function ChatBot() {
   const [uploadStatus, setUploadStatus] = useState("");
   const [sessionId, setSessionId] = useState<string>("");
   const [sending, setSending] = useState<boolean>(false);
+  const [cvJobId, setCvJobId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesViewportRef = useRef<HTMLDivElement>(null);
 
@@ -146,22 +147,32 @@ export default function ChatBot() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(apiUrl("/api/v1/cv/parse"), {
+      // Use internal API route which proxies auth and backend
+      const res = await fetch("/api/cv/parse", {
         method: "POST",
-        headers: { Authorization: `Bearer ${(session as any).accessToken}` },
         body: formData,
       });
 
       const result = await res.json();
 
       if (!res.ok) {
-        setUploadStatus(`Error: ${result.message || "Upload failed"}`);
+        setUploadStatus(`Error: ${result.message || result.error || "Upload failed"}`);
       } else {
-        setUploadStatus(
-          `Success: ${result.message || "File uploaded successfully!"}`
-        );
+        const jobId = result.jobId || result.id;
+        setUploadStatus(result.message || "CV parsing started.");
         setFile(null);
-        fetchJobSuggestions(); // Call to fetch job suggestions
+        if (jobId) {
+          setCvJobId(jobId);
+          // Announce and start polling for completion
+          setMessages((prev) => [
+            ...prev,
+            { type: "bubble", text: `Parsing started (Job ID: ${jobId}). I'll fetch jobs when it's done...`, byUser: false },
+          ]);
+          await pollCvStatus(jobId);
+        } else {
+          // If immediate result returned (unlikely), proceed
+          await fetchJobSuggestions();
+        }
       }
     } catch (err) {
       console.error("Upload error:", err);
@@ -170,6 +181,66 @@ export default function ChatBot() {
       setUploading(false);
     }
   };
+
+  async function pollCvStatus(jobId: string) {
+    // Simple polling up to ~60s
+    const maxAttempts = 30; // every 2s
+    for (let i = 0; i < maxAttempts; i++) {
+      try {
+        const r = await fetch(`/api/cv/${encodeURIComponent(jobId)}`);
+        const j = await r.json();
+        if (r.ok && (j.status === "Completed" || j.status === "Failed")) {
+          if (j.status === "Completed") {
+            // Announce basic results if available
+            const scoreText = typeof j.score === "number" ? ` Score: ${j.score}.` : "";
+            const skills = Array.isArray(j.skills) && j.skills.length ?
+              ` Extracted skills: ${j.skills.slice(0, 15).join(", ")}${j.skills.length > 15 ? "…" : ""}` : "";
+            setMessages((prev) => [
+              ...prev,
+              { type: "bubble", text: `CV parsed successfully.${scoreText}${skills}`, byUser: false },
+            ]);
+
+            // Try to apply parsed skills to user profile to improve matching
+            await updateProfileWithCv(j);
+
+            await fetchJobSuggestions();
+          } else {
+            setMessages((prev) => [
+              ...prev,
+              { type: "bubble", text: `CV parsing failed. Please try another file.`, byUser: false },
+            ]);
+          }
+          return;
+        }
+      } catch (e) {
+        // keep polling
+      }
+      await new Promise((res) => setTimeout(res, 2000));
+    }
+    setMessages((prev) => [
+      ...prev,
+      { type: "bubble", text: `CV parsing is taking longer than expected. We'll keep trying.`, byUser: false },
+    ]);
+  }
+
+  async function updateProfileWithCv(cv: any) {
+    if (!session) return;
+    try {
+      const skills: string[] = Array.isArray(cv?.skills) ? cv.skills.filter((s: any) => typeof s === "string") : [];
+      if (!skills.length) return;
+      await fetch(apiUrl("/api/v1/users/profile"), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${(session as any).accessToken}`,
+        },
+        body: JSON.stringify({ skills }),
+      });
+    } catch (e) {
+      // non-blocking
+      console.warn("Failed to update profile with CV skills", e);
+    }
+  }
 
   const fetchJobSuggestions = async () => {
     if (!session) return;
@@ -200,7 +271,7 @@ export default function ChatBot() {
           ...prev,
           {
             type: "bubble",
-            text: "Here are some job suggestions based on your CV:",
+            text: "Here are some job suggestions based on your profile/CV:",
             byUser: false,
           },
           ...jobCards,
