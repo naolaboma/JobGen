@@ -6,21 +6,20 @@ import { signIn } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 type FormValues = {
-  name: string;
   email: string;
   password: string;
-  confirmPassword: string;
 };
 
 export default function SignInForm() {
   const form = useForm<FormValues>();
-  const { register, handleSubmit, formState, watch } = form;
+  const { register, handleSubmit, formState } = form;
   const { errors } = formState;
   const [serverError, setServerError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/chat";
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   const onSubmit = async (data: FormValues) => {
     setServerError("");
@@ -28,7 +27,7 @@ export default function SignInForm() {
 
     try {
       const res = await signIn("credentials", {
-        redirect: false, // We will handle the redirect manually
+        redirect: false,
         email: data.email,
         password: data.password,
         callbackUrl,
@@ -54,25 +53,27 @@ export default function SignInForm() {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-12 p-8 bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-6 text-center text-black font-sans">
-        Welcome Back
-      </h1>
-      <div className="text-center mb-4 flex items-center justify-center gap-2">
-        <p className="text-black whitespace-nowrap font-sans">
-          Sign in to continue your job search journey
+    <div className="max-w-md mx-auto mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+      <div className="mb-6 text-center">
+        <h1 className="text-2xl font-extrabold tracking-tight text-black">
+          Sign in
+        </h1>
+        <p className="mt-2 text-sm text-gray-600">
+          Welcome back. Let’s continue your search.
         </p>
       </div>
-      <form className="font-sans" onSubmit={handleSubmit(onSubmit)} noValidate>
+
+      <div className="grid gap-3 mb-5">
         <button
           type="button"
           onClick={() => handleSocialSignIn("google")}
-          className="font-semibold w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded px-4 py-2 mb-4 hover:bg-gray-50 text-black"
+          className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-black hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#44C3BB]/40"
         >
           <span className="inline-block">
+            {/* Google icon */}
             <svg
-              width="21"
-              height="20"
+              width="18"
+              height="18"
               viewBox="0 0 21 20"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -100,9 +101,10 @@ export default function SignInForm() {
         <button
           type="button"
           onClick={() => handleSocialSignIn("github")}
-          className="font-semibold w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded px-4 py-2 mb-4 hover:bg-gray-50 text-black"
+          className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-black hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#44C3BB]/40"
         >
           <span className="inline-block">
+            {/* GitHub icon */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -115,27 +117,28 @@ export default function SignInForm() {
           </span>
           Continue with GitHub
         </button>
+      </div>
 
-        <div className="text-center mb-4 flex items-center justify-center gap-2">
-          <div className="flex-1 border-b border-gray-300"></div>
-          <p className="text-gray-500 whitespace-nowrap">
-            Or continue with email
-          </p>
-          <div className="flex-1 border-b border-gray-300"></div>
-        </div>
+      <div className="relative flex items-center gap-3 my-6">
+        <div className="flex-1 h-px bg-gray-200" />
+        <span className="text-xs text-gray-500">or with email</span>
+        <div className="flex-1 h-px bg-gray-200" />
+      </div>
 
-        <div className="mb-4">
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+        <div>
           <label
-            className="block mb-1 text-black font-semibold"
+            className="block mb-1 text-sm text-black font-medium"
             htmlFor="email"
           >
-            Email Address
+            Email
           </label>
           <input
-            className="w-full border rounded px-3 py-2 placeholder-gray-400 text-gray-400"
-            type="email"
             id="email"
-            placeholder="Enter email address"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-black placeholder-gray-400 shadow-xs focus:outline-none focus:ring-2 focus:ring-[#44C3BB]/40 focus:border-[#44C3BB]"
             {...register("email", {
               required: "Email is required",
               pattern: {
@@ -145,51 +148,124 @@ export default function SignInForm() {
               },
             })}
           />
-          <p className="text-red-500 text-sm">{errors.email?.message}</p>
+          {errors.email?.message && (
+            <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
+          )}
         </div>
-        <div className="mb-4">
+
+        <div>
           <label
-            className="block mb-1 text-black font-semibold"
+            className="block mb-1 text-sm text-black font-medium"
             htmlFor="password"
           >
             Password
           </label>
-          <input
-            className="w-full border rounded px-3 py-2 placeholder-gray-400 text-gray-400"
-            type="password"
-            id="password"
-            placeholder="Enter password"
-            {...register("password", {
-              required: "Password is required",
-              minLength: {
-                value: 8,
-                message: "Password must be at least 8 characters",
-              },
-            })}
-          />
-          <p className="text-red-500 text-sm">{errors.password?.message}</p>
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              placeholder="••••••••"
+              className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 pr-10 text-sm text-black placeholder-gray-400 shadow-xs focus:outline-none focus:ring-2 focus:ring-[#44C3BB]/40 focus:border-[#44C3BB]"
+              {...register("password", {
+                required: "Password is required",
+                minLength: {
+                  value: 8,
+                  message: "Password must be at least 8 characters",
+                },
+              })}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute inset-y-0 right-0 px-3 text-gray-500 hover:text-gray-700 focus:outline-none"
+            >
+              {showPassword ? (
+                // Eye-off
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M3 3l18 18" />
+                  <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" />
+                  <path d="M16.24 16.24A10.94 10.94 0 0 1 12 18c-5 0-9-4-9-6a10.94 10.94 0 0 1 4.53-5.94" />
+                  <path d="M14.12 9.88A2 2 0 0 0 12 8a2 2 0 0 0-2 2" />
+                  <path d="M17.94 13.06A10.94 10.94 0 0 0 21 12c0-2-4-6-9-6a10.94 10.94 0 0 0-1.18.06" />
+                </svg>
+              ) : (
+                // Eye
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
+          {errors.password?.message && (
+            <p className="mt-1 text-xs text-red-600">
+              {errors.password.message}
+            </p>
+          )}
         </div>
 
         {serverError && (
-          <p className="text-red-500 text-sm mb-2">{serverError}</p>
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            {serverError}
+          </div>
         )}
+
         <button
-          className="w-full bg-[#7BBFB3] text-white py-2 rounded-xl font-semibold disabled:opacity-50"
+          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#44C3BB] text-white py-2.5 font-semibold shadow-sm hover:bg-[#3bb3ac] focus:outline-none focus:ring-2 focus:ring-[#44C3BB]/40 disabled:opacity-60"
           type="submit"
           disabled={isLoading}
         >
-          {isLoading ? "Logging in..." : "Login"}
+          {isLoading && (
+            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+              />
+            </svg>
+          )}
+          {isLoading ? "Signing in..." : "Sign in"}
         </button>
       </form>
-      <p className="mt-4 text-gray-600 text-center">
-        Don't have an account?{" "}
-        <Link
-          href={`/register?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-          className="text-[#7BBFB3] font-semibold"
-        >
-          Sign up
+
+      <div className="mt-5 flex items-center justify-between text-sm">
+        <Link href="/support" className="text-gray-600 hover:text-black">
+          Forgot password?
         </Link>
-      </p>
+        <p className="text-gray-600">
+          No account?{" "}
+          <Link
+            href={`/register?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+            className="text-[#44C3BB] font-semibold hover:underline"
+          >
+            Sign up
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

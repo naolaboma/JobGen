@@ -19,6 +19,16 @@ interface ApiResponse {
   success: boolean;
 }
 
+interface PaginatedJobsResponse {
+  items: JobProps[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: `${
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
@@ -77,11 +87,19 @@ export const JobApi = createApi({
           sort_order,
         },
       }),
+      transformResponse: (response: any): JobProps[] => {
+        // Backend returns StandardResponse{ data: { items: [...], ... } }
+        const d = response?.data;
+        if (Array.isArray(d)) return d as JobProps[]; // fallback if non-paginated
+        if (Array.isArray(d?.items)) return d.items as JobProps[];
+        if (Array.isArray(response)) return response as JobProps[];
+        return [];
+      },
     }),
 
     // Fetch matched jobs (requires authentication)
     fetchMatchedJobs: builder.query<
-      JobProps[],
+      PaginatedJobsResponse,
       { page?: number; limit?: number }
     >({
       query: (params) => ({
@@ -89,11 +107,17 @@ export const JobApi = createApi({
         method: "GET",
         params: { page: params.page ?? 1, limit: params.limit ?? 2 },
       }),
-      transformResponse: (response: ApiResponse) => {
-        if (Array.isArray(response.data)) {
-          return response.data;
-        }
-        return [];
+      transformResponse: (response: any): PaginatedJobsResponse => {
+        const d = response?.data || {};
+        return {
+          items: Array.isArray(d.items) ? d.items : [],
+          page: d.page ?? 1,
+          limit: d.limit ?? (Array.isArray(d.items) ? d.items.length : 0),
+          total: d.total ?? (Array.isArray(d.items) ? d.items.length : 0),
+          total_pages: d.total_pages ?? 1,
+          has_next: d.has_next ?? false,
+          has_prev: d.has_prev ?? false,
+        };
       },
     }),
   }),

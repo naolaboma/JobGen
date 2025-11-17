@@ -49,18 +49,17 @@ type VerifyEmailRequest struct {
 
 // UpdateProfileRequest represents the profile update request
 type UpdateProfileRequest struct {
-	FullName         *string          `json:"full_name,omitempty"`
-	PhoneNumber      *string          `json:"phone_number,omitempty"`
-	Location         *string          `json:"location,omitempty"`
-	Skills           *[]string        `json:"skills,omitempty"`
-	ExperienceYears  *int             `json:"experience_years,omitempty"`
-	Bio              *string          `json:"bio,omitempty"`
-	ProfilePicture   *string          `json:"profile_picture,omitempty"`
-	JobType          *domain.JobType  `json:"job_type,omitempty" binding:"omitempty,oneof=full-time part-time contract internship temporary remote hybrid freelance"`
-	PreferredCountry *string          `json:"preferred_country,omitempty"`
-	CityRegion       *string          `json:"city_region,omitempty"`
+	FullName         *string         `json:"full_name,omitempty"`
+	PhoneNumber      *string         `json:"phone_number,omitempty"`
+	Location         *string         `json:"location,omitempty"`
+	Skills           *[]string       `json:"skills,omitempty"`
+	ExperienceYears  *int            `json:"experience_years,omitempty"`
+	Bio              *string         `json:"bio,omitempty"`
+	ProfilePicture   *string         `json:"profile_picture,omitempty"`
+	JobType          *domain.JobType `json:"job_type,omitempty" binding:"omitempty,oneof=full-time part-time contract internship temporary remote hybrid freelance"`
+	PreferredCountry *string         `json:"preferred_country,omitempty"`
+	CityRegion       *string         `json:"city_region,omitempty"`
 }
-
 
 type ChangePasswordRequest struct {
 	OldPassword string `json:"old_password" binding:"required"`
@@ -81,11 +80,11 @@ type UpdateUserRoleRequest struct {
 	Role domain.Role `json:"role" binding:"required,oneof=user admin"`
 }
 
-
 type ResendOTPRequest struct {
-    Email   string `json:"email" binding:"required,email"`
-    Purpose string `json:"purpose" binding:"required,oneof=EMAIL_VERIFICATION PASSWORD_RESET"`
+	Email   string `json:"email" binding:"required,email"`
+	Purpose string `json:"purpose" binding:"required,oneof=EMAIL_VERIFICATION PASSWORD_RESET"`
 }
+
 // todo it is better to move the auth related things inside auth controller
 // @Summary Register a new user
 // @Description Register a new user account with email verification
@@ -186,7 +185,8 @@ func (c *UserController) Login(ctx *gin.Context) {
 	)
 
 	SuccessResponse(ctx, http.StatusOK, "Login successful", gin.H{
-		"access_token": tokens.AccessToken,
+		"access_token":  tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
 	})
 }
 
@@ -256,7 +256,6 @@ func (c *UserController) GetProfile(ctx *gin.Context) {
 	})
 }
 
-
 // @Summary Update user profile
 // @Description Update current user's profile information
 // @Tags User Profile
@@ -304,7 +303,6 @@ func (c *UserController) UpdateProfile(ctx *gin.Context) {
 		"user": updatedUser,
 	})
 }
-
 
 // @Summary Request password reset (OTP)
 // @Description Request a password reset OTP to be sent to the user's email
@@ -365,6 +363,7 @@ func (c *UserController) ResetPassword(ctx *gin.Context) {
 
 	SuccessResponse(ctx, http.StatusOK, "Password reset successful. You can now login with your new password.", nil)
 }
+
 // @Summary Change password
 // @Description Change the user's password while logged in
 // @Tags Authentication
@@ -449,7 +448,7 @@ func (c *UserController) GetUsers(ctx *gin.Context) {
 	// Parse query parameters
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
-	
+
 	filter := domain.UserFilter{
 		Page:      page,
 		Limit:     limit,
@@ -457,12 +456,12 @@ func (c *UserController) GetUsers(ctx *gin.Context) {
 		SortBy:    ctx.DefaultQuery("sort_by", "created_at"),
 		SortOrder: ctx.DefaultQuery("sort_order", "desc"),
 	}
-	
+
 	if role := ctx.Query("role"); role != "" {
 		r := domain.Role(role)
 		filter.Role = &r
 	}
-	
+
 	if active := ctx.Query("active"); active != "" {
 		isActive := active == "true"
 		filter.IsActive = &isActive
@@ -503,12 +502,12 @@ func (c *UserController) GetUsers(ctx *gin.Context) {
 func (c *UserController) UpdateUserRole(ctx *gin.Context) {
 	adminUserID := ctx.GetString("user_id")
 	targetUserID := ctx.Param("user_id")
-	
+
 	if adminUserID == "" {
 		UnauthorizedResponse(ctx, "Admin user ID not found in token")
 		return
 	}
-	
+
 	if targetUserID == "" {
 		ErrorResponse(ctx, http.StatusBadRequest, "VALIDATION_ERROR", "User ID is required", nil)
 		return
@@ -550,12 +549,12 @@ func (c *UserController) UpdateUserRole(ctx *gin.Context) {
 func (c *UserController) ToggleUserStatus(ctx *gin.Context) {
 	adminUserID := ctx.GetString("user_id")
 	targetUserID := ctx.Param("user_id")
-	
+
 	if adminUserID == "" {
 		UnauthorizedResponse(ctx, "Admin user ID not found in token")
 		return
 	}
-	
+
 	if targetUserID == "" {
 		ErrorResponse(ctx, http.StatusBadRequest, "VALIDATION_ERROR", "User ID is required", nil)
 		return
@@ -591,12 +590,12 @@ func (c *UserController) ToggleUserStatus(ctx *gin.Context) {
 func (c *UserController) DeleteUser(ctx *gin.Context) {
 	adminUserID := ctx.GetString("user_id")
 	targetUserID := ctx.Param("user_id")
-	
+
 	if adminUserID == "" {
 		UnauthorizedResponse(ctx, "Admin user ID not found in token")
 		return
 	}
-	
+
 	if targetUserID == "" {
 		ErrorResponse(ctx, http.StatusBadRequest, "VALIDATION_ERROR", "User ID is required", nil)
 		return
@@ -628,26 +627,25 @@ func (c *UserController) DeleteUser(ctx *gin.Context) {
 // @Failure 404 {object} StandardResponse "User not found"
 // @Router /auth/resend-otp [post]
 func (c *UserController) ResendOTP(ctx *gin.Context) {
-    var req ResendOTPRequest
-    if err := ctx.ShouldBindJSON(&req); err != nil {
-        ValidationErrorResponse(ctx, err)
-        return
-    }
+	var req ResendOTPRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ValidationErrorResponse(ctx, err)
+		return
+	}
 
-    err := c.userUsecase.ResendOTP(ctx, req.Email, domain.OTPPurpose(req.Purpose))
-    if err != nil {
-        if err == domain.ErrUserNotFound {
-            NotFoundResponse(ctx, "User not found")
-            return
-        }
-        if err == domain.ErrAlreadyVerified {
-            ErrorResponse(ctx, http.StatusBadRequest, "ALREADY_VERIFIED", "Email is already verified", nil)
-            return
-        }
-        InternalErrorResponse(ctx, "Failed to resend OTP")
-        return
-    }
+	err := c.userUsecase.ResendOTP(ctx, req.Email, domain.OTPPurpose(req.Purpose))
+	if err != nil {
+		if err == domain.ErrUserNotFound {
+			NotFoundResponse(ctx, "User not found")
+			return
+		}
+		if err == domain.ErrAlreadyVerified {
+			ErrorResponse(ctx, http.StatusBadRequest, "ALREADY_VERIFIED", "Email is already verified", nil)
+			return
+		}
+		InternalErrorResponse(ctx, "Failed to resend OTP")
+		return
+	}
 
-    SuccessResponse(ctx, http.StatusOK, "OTP resent successfully", nil)
+	SuccessResponse(ctx, http.StatusOK, "OTP resent successfully", nil)
 }
-

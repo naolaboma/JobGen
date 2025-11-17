@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	domain "jobgen-backend/Domain"
+	"log"
 	"strings"
 	"time"
 
@@ -28,20 +29,29 @@ func NewUserRepository(db *mongo.Database) domain.IUserRepository {
 func (r *UserRepository) createIndexes() {
 	ctx := context.Background()
 
+	// Use case-insensitive collation for unique constraints on text fields
+	ci := &options.Collation{Locale: "en", Strength: 2}
+
 	// Unique index for email
 	emailIndex := mongo.IndexModel{
 		Keys:    bson.D{{Key: "email", Value: 1}},
-		Options: options.Index().SetUnique(true),
+		Options: options.Index().SetUnique(true).SetBackground(true).SetCollation(ci),
 	}
 	// Unique index for username
 	usernameIndex := mongo.IndexModel{
 		Keys:    bson.D{{Key: "username", Value: 1}},
-		Options: options.Index().SetUnique(true),
+		Options: options.Index().SetUnique(true).SetBackground(true).SetCollation(ci),
 	}
-	r.collection.Indexes().CreateMany(ctx, []mongo.IndexModel{emailIndex, usernameIndex})
+	if _, err := r.collection.Indexes().CreateMany(ctx, []mongo.IndexModel{emailIndex, usernameIndex}); err != nil {
+		log.Printf("warning: failed to create user indexes: %v", err)
+	}
 }
 
 func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
+	// Normalize input to avoid case-duplicates
+	user.Email = strings.ToLower(strings.TrimSpace(user.Email))
+	user.Username = strings.ToLower(strings.TrimSpace(user.Username))
+
 	// Check email
 	existingUser, err := r.GetByEmail(ctx, user.Email)
 	if err != nil && err != domain.ErrUserNotFound {
@@ -122,7 +132,7 @@ func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
 	update := bson.M{"$set": user}
 
 	result, err := r.collection.UpdateOne(ctx, filter, update)
-    fmt.Println("Update user mongoose", result, err)
+	fmt.Println("Update user mongoose", result, err)
 	if err != nil {
 		return err
 	}

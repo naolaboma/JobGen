@@ -16,7 +16,13 @@
     { "key": "jobEntityId", "value": "" },
     { "key": "cvJobId", "value": "" },
     { "key": "fileId", "value": "" },
-    { "key": "session_id", "value": "" }
+    { "key": "session_id", "value": "" },
+    { "key": "cvStatus", "value": "" },
+    { "key": "cvScore", "value": "" },
+    { "key": "cvSuggestionCount", "value": "" },
+    { "key": "cvPollCount", "value": "" },
+    { "key": "cvPollMax", "value": "20" },
+    { "key": "matchedJobsCount", "value": "" }
   ],
   "item": [
     {
@@ -320,6 +326,20 @@
         },
         {
           "name": "Matched Jobs (Auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}",
+                  "pm.test('Matched jobs OK', () => pm.response.code === 200);",
+                  "pm.test('Has items array', () => Array.isArray(json.items));",
+                  "pm.collectionVariables.set('matchedJobsCount', Array.isArray(json.items) ? json.items.length : 0);"
+                ]
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
@@ -674,6 +694,56 @@
         },
         {
           "name": "Get Parsing Status (/cv/:id) [Note: param may mismatch]",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{apiBase}}/cv/{{cvJobId}}"
+          }
+        },
+        {
+          "name": "Poll Parsing (/cv/{{cvJobId}} until Completed)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const n = parseInt(pm.collectionVariables.get('cvPollCount') || '0', 10);",
+                  "pm.collectionVariables.set('cvPollCount', String(n + 1));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}",
+                  "const status = json.status || json.data?.status || '';",
+                  "pm.test('Status present', () => !!status);",
+                  "const score = (json.score !== undefined) ? json.score : (json.data && json.data.score);",
+                  "const sugg = Array.isArray(json.suggestions) ? json.suggestions : (json.data && json.data.suggestions) || [];",
+                  "if (score !== undefined) pm.collectionVariables.set('cvScore', String(score));",
+                  "pm.collectionVariables.set('cvSuggestionCount', Array.isArray(sugg) ? String(sugg.length) : '');",
+                  "pm.collectionVariables.set('cvStatus', status || '');",
+                  "const count = parseInt(pm.collectionVariables.get('cvPollCount') || '0', 10);",
+                  "const max = parseInt(pm.collectionVariables.get('cvPollMax') || '20', 10);",
+                  "if (status === 'Completed' || status === 'Failed' || count >= max) {",
+                  "  pm.collectionVariables.unset('cvPollCount');",
+                  "  postman.setNextRequest(null);",
+                  "} else {",
+                  "  postman.setNextRequest('CV (Auth) / Poll Parsing (/cv/{{cvJobId}} until Completed)');",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",

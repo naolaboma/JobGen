@@ -87,28 +87,26 @@ export const authOptions: NextAuthOptions = {
         }
 
         const backendResponse = await res.json();
-
-        const accessToken = backendResponse.data.access_token; // Access token is nested under 'data'
+        const accessToken = backendResponse.data?.access_token;
+        const refreshToken = backendResponse.data?.refresh_token; // now provided by backend JSON
 
         if (accessToken) {
           const accessTokenPayload = parseJwt(accessToken);
-          const accessTokenExpires = accessTokenPayload.exp * 1000;
+          const accessTokenExpires = accessTokenPayload?.exp
+            ? accessTokenPayload.exp * 1000
+            : Date.now() + 60 * 60 * 1000;
 
-          // Construct a minimal user object from available information
-          // Assuming email is unique and can serve as an ID for NextAuth.js
           const user: User = {
-            id: credentials.email, // Using email as ID, as no user ID is returned
+            id: credentials.email,
             email: credentials.email,
-            name: credentials.email, // Using email as name, as no full name is returned
+            name: credentials.email,
           };
 
           return {
             ...user,
-            accessToken: accessToken,
-            // refreshToken cannot be accessed from http-only cookie,
-            // so session renewal will not work.
-            refreshToken: undefined, // Explicitly set to undefined
-            accessTokenExpires: accessTokenExpires,
+            accessToken,
+            refreshToken, // persist refresh token into JWT
+            accessTokenExpires,
           } as User & {
             accessToken: string;
             refreshToken?: string;
@@ -122,35 +120,33 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
+    maxAge: 24 * 60 * 60, // 1 day
+    updateAge: 60 * 60, // 1 hour
   },
   callbacks: {
     async jwt({ token, user, account }) {
-      // Initial sign in
       if (account && user) {
         return {
           ...token,
-          id: user.id,
+          id: (user as any).id,
           accessToken: (user as any).accessToken,
-          refreshToken: (user as any).refreshToken,
+          refreshToken: (user as any).refreshToken, // retain refresh token on initial sign in
           accessTokenExpires: (user as any).accessTokenExpires,
         };
       }
 
-      // Return previous token if the access token has not expired yet
       if (Date.now() < (token.accessTokenExpires as number)) {
         return token;
       }
 
-      // Access token has expired, try to update it
-      return refreshAccessToken(token);
+      return refreshAccessToken(token as any);
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id as string;
       }
       (session as any).accessToken = token.accessToken;
-      (session as any).error = token.error; // Propagate error to the client
-
+      (session as any).error = token.error;
       return session;
     },
   },

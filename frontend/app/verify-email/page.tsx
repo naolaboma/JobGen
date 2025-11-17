@@ -25,7 +25,7 @@ function VerifyEmailInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
-  const callbackUrl = searchParams.get("callbackUrl") || "/chat";
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   const onSubmit = async (data: FormValues) => {
     setServerError("");

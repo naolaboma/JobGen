@@ -4,11 +4,12 @@ import { getToken } from "next-auth/jwt";
 
 const PROTECTED_PREFIXES = [
   "/chat",
-  "/user-home",
   "/profile",
   "/settings",
   "/dashboard",
   "/notifications",
+  "/cv",
+  "/user-home/personalized-jobs",
 ];
 
 export async function middleware(req: NextRequest) {
@@ -30,10 +31,10 @@ export async function middleware(req: NextRequest) {
   );
   const isAuthPage = pathname === "/login" || pathname === "/register";
 
-  // Redirect logged-in users away from auth pages
+  // Redirect logged-in users away from auth pages to home
   if (isAuth && isAuthPage) {
     const url = req.nextUrl.clone();
-    url.pathname = "/user-home/fallback-page";
+    url.pathname = "/";
     url.search = "";
     return NextResponse.redirect(url);
   }
@@ -74,6 +75,8 @@ export const config = {
     "/dashboard/:path*",
     "/notifications",
     "/notifications/:path*",
+    "/cv",
+    "/cv/:path*",
     "/login",
     "/register",
   ],

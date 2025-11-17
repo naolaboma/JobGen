@@ -1,19 +1,22 @@
-'use client';
+"use client";
 
-import { useDispatch, useSelector } from 'react-redux';
-import { useFetchMatchedJobsQuery } from '@/lib/redux/api/JobApi';
-import JobCard from '@/app/components/JobCard';
-import Pagination from '@/app/components/Pagination';
-import Link from 'next/link';
-import { setPage } from '@/lib/redux/slices/jobSlice';
-import { RootState } from '@/store/store';
+import { useDispatch, useSelector } from "react-redux";
+import { useFetchMatchedJobsQuery } from "@/lib/redux/api/JobApi";
+import JobCard from "@/app/components/JobCard";
+import Pagination from "@/app/components/Pagination";
+import Link from "next/link";
+import { setPage } from "@/lib/redux/slices/jobSlice";
+import { RootState } from "@/store/store";
 
 export default function PersonalizedJobsPage() {
   const dispatch = useDispatch();
   const filters = useSelector((state: RootState) => state.job);
 
-  const { data, isLoading, error } = useFetchMatchedJobsQuery({ page: filters.page, limit: filters.limit });
-  const totalPages = data ? Math.ceil(data.length / (filters.limit ?? 10)) : 1;
+  const { data, isLoading, error } = useFetchMatchedJobsQuery({
+    page: filters.page,
+    limit: filters.limit,
+  });
+  const totalPages = data ? data.total_pages : 1;
 
   const handlePageChange = (newPage: number) => {
     dispatch(setPage(newPage));
@@ -21,25 +24,66 @@ export default function PersonalizedJobsPage() {
 
   if (isLoading) return <div className="text-center py-10">Loading...</div>;
   if (error) {
-    const errorMessage = 'error' in error ? error.error : 'Unknown error occurred';
-    return <div className="text-center py-10 text-red-600">Error: {errorMessage}</div>;
+    const errorMessage =
+      (error as any)?.status === 401
+        ? "Please sign in to view matched jobs."
+        : "error" in (error as any)
+        ? (error as any).error
+        : "Unknown error occurred";
+    return (
+      <div className="text-center py-10 text-red-600">
+        Error: {errorMessage}
+      </div>
+    );
+  }
+
+  if (!data || data.items.length === 0) {
+    return (
+      <div className="min-h-screen bg-white p-6">
+        <h1 className="text-2xl font-bold mb-6 text-gray-900">
+          Personalized Job Recommendations
+        </h1>
+        <p className="mb-6 text-gray-700">
+          No matched jobs yet.{" "}
+          <Link href="/profile" className="text-[#7BBFB3] hover:underline">
+            Update your profile skills
+          </Link>{" "}
+          or{" "}
+          <Link href="/user-home" className="text-[#7BBFB3] hover:underline">
+            browse all jobs
+          </Link>
+          .
+        </p>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-white p-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900">Personalized Job Recommendations</h1>
-      <p className="mb-6 text-gray-700">Jobs matched to your profile! <Link href="/profile-setup" className="text-[#7BBFB3] hover:underline">Update Profile</Link></p>
+      <h1 className="text-2xl font-bold mb-6 text-gray-900">
+        Personalized Job Recommendations
+      </h1>
+      <p className="mb-6 text-gray-700">
+        Jobs matched to your profile!{" "}
+        <Link href="/profile" className="text-[#7BBFB3] hover:underline">
+          Update Profile
+        </Link>
+      </p>
 
       <div className="grid gap-6">
-        {data?.map((job) => (
+        {data.items.map((job) => (
           <JobCard
             key={job.id}
             {...job}
-            percentage={Math.floor(Math.random() * 100)} // Placeholder for match percentage
+            percentage={Math.floor(Math.random() * 40) + 60}
           />
         ))}
       </div>
-      <Pagination currentPage={filters.page ?? 1} totalPages={totalPages} onPageChange={handlePageChange} />
+      <Pagination
+        currentPage={filters.page ?? 1}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 }

@@ -1,0 +1,1 @@
+export { default } from "../user-home/fallback-page/page";
